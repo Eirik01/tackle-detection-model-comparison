@@ -45,7 +45,7 @@ from data.balanced_temporal_dataset import (  # noqa: E402
 CLASS_NAMES = ["Background", "Tackle-Live", "Tackle-Replay"]
 CLASS_COLOURS = {0: "#666666", 1: "#d24545", 2: "#e89126"}
 
-# Mirrors the run_train_eval_temporal_{dinov3,vjepa2}.sh `--protocol centered`
+# Mirrors the run_train_eval_temporal_{dinov3,vjepa2}.sh `--protocol centred`
 # default: balanced W=10 @ 5 FPS windows, reflect padding, 70/15/15 split.
 TARGET_FPS = 5.0
 WINDOW_SIZE = 10
@@ -179,7 +179,7 @@ def main() -> int:
     metrics = {
         "config": {
             "target_fps": TARGET_FPS, "window_size": WINDOW_SIZE,
-            "padding_mode": PADDING_MODE, "protocol": "centered (balanced)",
+            "padding_mode": PADDING_MODE, "protocol": "centred (balanced)",
             "seed": SEED, "pooling": "mean-over-tokens",
         },
         "DINOv3-Large_dense": compute_metrics(F_d, L_d, "DINOv3-Large (dense, mean-pooled)"),

@@ -236,7 +236,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = args.video_id
 
-    txt_path = out_dir / f"{stem}_vjepa2_events.txt"
+    txt_path = out_dir / f"{stem}_vjepa2_temporal_events.txt"
     with open(txt_path, "w") as f:
         f.write(f"# Fired tackle events for '{stem}' (V-JEPA 2 attentive probe)\n")
         f.write(f"# checkpoint        : {ckpt_path}\n")
@@ -271,14 +271,14 @@ def main():
                     "anchor_idx": d["anchor"],
                 })
 
-    csv_fired = out_dir / f"{stem}_vjepa2_events.csv"
-    csv_all = out_dir / f"{stem}_vjepa2_events_all.csv"
+    csv_fired = out_dir / f"{stem}_vjepa2_temporal_events.csv"
+    csv_all = out_dir / f"{stem}_vjepa2_temporal_events_all.csv"
     _write_csv(csv_fired, fired)
     _write_csv(csv_all, detections)
     print(f"  wrote {csv_fired}")
     print(f"  wrote {csv_all}  (every peak, re-threshold without re-running)")
 
-    (out_dir / f"{stem}_vjepa2_predict_summary.json").write_text(json.dumps({
+    (out_dir / f"{stem}_vjepa2_temporal_predict_summary.json").write_text(json.dumps({
         "video_id": stem,
         "checkpoint": str(ckpt_path),
         "backbone": backbone,

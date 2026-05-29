@@ -26,9 +26,9 @@ import csv
 from pathlib import Path
 
 PIPELINES = {
-    "dinov3_attn": "2_720p_events_all.csv",
-    "dinov3_lin":  "2_720p_spatial_events_all.csv",
-    "vjepa2_attn": "2_720p_vjepa2_events_all.csv",
+    "dinov3_attn": "2_720p_dinov3_temporal_events_all.csv",
+    "dinov3_lin":  "2_720p_dinov3_spatial_events_all.csv",
+    "vjepa2_attn": "2_720p_vjepa2_temporal_events_all.csv",
 }
 
 

@@ -7,7 +7,7 @@
 #   MODEL_SUFFIX=other_run sbatch soccernet_experiment/run_predict_vjepa2.sh
 #
 # MODEL_SUFFIX selects the checkpoint best_attn_vjepa2_l_<MODEL_SUFFIX>.pth from
-# TACDEC_MODELS/vjepa2_l/. Defaults to centered_v1 (the live single-fold suffix
+# TACDEC_MODELS/vjepa2_l/. Defaults to centred_v1 (the live single-fold suffix
 # used by run_train_eval_temporal_vjepa2.sh and run_predict.sh).
 #
 # --- Slurm job parameters ---
@@ -25,7 +25,7 @@ mkdir -p slurm_logs/soccernet
 
 # Mirrors SOCCERNET_EXPERIMENT_DIR in src/config.py — keep in sync.
 EXP_DIR=${EXP_DIR:-/cluster/work/projects/ec12/ec-eirikto/soccernet_thesis_experiment}
-MODEL_SUFFIX=${MODEL_SUFFIX:-centered_v1}
+MODEL_SUFFIX=${MODEL_SUFFIX:-centred_v1}
 MIN_CONFIDENCE=${MIN_CONFIDENCE:-0.5}
 SIGMA=${SIGMA:-1.0}
 MIN_DISTANCE_SEC=${MIN_DISTANCE_SEC:-0.5}
@@ -66,4 +66,4 @@ uv run python -u src/predict_soccernet_vjepa2.py \
     "${MAX_DURATION_ARG[@]}" \
     --out-dir "${OUT_DIR}"
 
-echo "Done. Look in ${OUT_DIR}/ for *_vjepa2_events.txt"
+echo "Done. Look in ${OUT_DIR}/ for *_vjepa2_temporal_events.txt"

@@ -21,7 +21,7 @@ source setup.sh
 
 mkdir -p slurm_logs results/attn_windows
 
-MODEL_SUFFIX=${MODEL_SUFFIX:-centered_v1}
+MODEL_SUFFIX=${MODEL_SUFFIX:-centred_v1}
 
 # (clip_id, anchor_idx) pairs. anchor_idx is on the 5 FPS grid (matches the
 # f<NN> suffix in figures/qualitative/ and the CSV frame_idx column).

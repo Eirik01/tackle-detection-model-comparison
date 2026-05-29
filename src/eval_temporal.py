@@ -7,7 +7,7 @@ Tracks (selected via --metric):
 
   1. 'balanced'   — frame-level on the protocol's TEST pool (the same window
      sampler used at training time, but on test-split clips). For
-     --protocol centered, this is build_balanced_windows on the test clips:
+     --protocol centred, this is build_balanced_windows on the test clips:
      one window per event + class-balanced background, strict center-frame
      label. Reports per-class P/R/F1 + confusion matrix.
 
@@ -24,9 +24,9 @@ Tracks (selected via --metric):
 Usage:
   uv run python src/eval_temporal.py \
       --backbone-type dinov3 --window-size 10 --fps 5.0 \
-      --protocol centered --model-suffix centered_v1 \
+      --protocol centred --model-suffix centred_v1 \
       --metric all --seed 42 \
-      --save-json results/temporal/dinov3_l_centered_v1_test.json
+      --save-json results/temporal/dinov3_l_centred_v1_test.json
 """
 
 from __future__ import annotations
@@ -499,8 +499,8 @@ def main():
     ap.add_argument("--window-size", type=int, default=10,
                     help="W (default 10; 5 FPS * 2 s, even).")
     ap.add_argument("--protocol",
-                    choices=["centered", "kassab_concat"],
-                    default="centered",
+                    choices=["centred", "kassab_concat"],
+                    default="centred",
                     help="Test-pool sampler for the 'balanced' track only. Should "
                          "match the protocol used at training time. 'kassab_concat' "
                          "is strict Kassab TempTAC parity at 5 FPS (cross-clip "
@@ -609,7 +609,7 @@ def main():
 
     # ---- Track 1: frame-level on the protocol's test pool -------------------
     if want_balanced:
-        if args.protocol == "centered":
+        if args.protocol == "centred":
             _, _, test_loader, info = get_balanced_temporal_dataloaders(
                 labels_dir=TACDEC_LABELS,
                 features_dir=features_dir,
@@ -873,7 +873,7 @@ def main():
         # Fresh DataLoader at the profile batch size, reusing the same balanced
         # test pool used by Track 1. Centered protocol is the canonical one for
         # both backbones; kassab_concat (DINOv3-only) is also supported.
-        if args.protocol == "centered":
+        if args.protocol == "centred":
             _, _, prof_loader, _ = get_balanced_temporal_dataloaders(
                 labels_dir=TACDEC_LABELS,
                 features_dir=features_dir,

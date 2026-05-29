@@ -18,8 +18,8 @@ source setup.sh
 mkdir -p slurm_logs/train_eval/temporal results/temporal
 
 # Usage:
-#   sbatch run_train_eval_temporal_dinov3.sh                          # defaults (centered)
-#   sbatch run_train_eval_temporal_dinov3.sh centered_v2 50 64        # custom suffix / epochs / batch
+#   sbatch run_train_eval_temporal_dinov3.sh                          # defaults (centred)
+#   sbatch run_train_eval_temporal_dinov3.sh centred_v2 50 64        # custom suffix / epochs / batch
 #
 # Kassab TempTAC parity, STRICT concat-and-slide (cross-clip windows, DINOv3-only):
 #   PROTOCOL=kassab_concat \
@@ -37,7 +37,7 @@ mkdir -p slurm_logs/train_eval/temporal results/temporal
 #   sbatch run_train_eval_temporal_dinov3.sh kassab_concat_bug_v1
 
 BACKBONE_TYPE=dinov3
-MODEL_SUFFIX=${1:-centered_v1}
+MODEL_SUFFIX=${1:-centred_v1}
 NUM_EPOCHS=${2:-30}
 BATCH_SIZE=${3:-64}
 # Selected hyperparameters from sweeps/dinov3_l/seed42/selection.json under
@@ -47,8 +47,8 @@ BATCH_SIZE=${3:-64}
 LEARNING_RATE=${4:-1e-4}
 SEED=${5:-42}
 WEIGHT_DECAY=${6:-1e-2}
-PROTOCOL=${PROTOCOL:-centered}
-# 'kassab_concat' protocol caps (ignored by 'centered'). Kassab Table 7.6 defaults.
+PROTOCOL=${PROTOCOL:-centred}
+# 'kassab_concat' protocol caps (ignored by 'centred'). Kassab Table 7.6 defaults.
 REPLAY_CAP=${REPLAY_CAP:-280}
 BG_COUNT=${BG_COUNT:-500}
 FEATURE_CACHE=${FEATURE_CACHE:-8}

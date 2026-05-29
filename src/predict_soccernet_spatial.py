@@ -195,7 +195,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = args.video_id
 
-    txt_path = out_dir / f"{stem}_spatial_events.txt"
+    txt_path = out_dir / f"{stem}_dinov3_spatial_events.txt"
     with open(txt_path, "w") as f:
         f.write(f"# Fired tackle events for '{stem}' (DINOv3 linear spatial probe)\n")
         f.write(f"# run-dir            : {run_dir}\n")
@@ -231,14 +231,14 @@ def main():
                     "frame_idx": int(d["frame"]),
                 })
 
-    csv_fired = out_dir / f"{stem}_spatial_events.csv"
-    csv_all = out_dir / f"{stem}_spatial_events_all.csv"
+    csv_fired = out_dir / f"{stem}_dinov3_spatial_events.csv"
+    csv_all = out_dir / f"{stem}_dinov3_spatial_events_all.csv"
     _write_csv(csv_fired, fired)
     _write_csv(csv_all, detections)
     print(f"  wrote {csv_fired}")
     print(f"  wrote {csv_all}  (every segment, re-threshold without re-running)")
 
-    (out_dir / f"{stem}_spatial_predict_summary.json").write_text(json.dumps({
+    (out_dir / f"{stem}_dinov3_spatial_predict_summary.json").write_text(json.dumps({
         "video_id": stem,
         "run_dir": str(run_dir),
         "backbone_id": backbone_id,

@@ -3,7 +3,7 @@
 # fired tackle events with timestamps for manual verification.
 #
 # Submit AFTER run_extract.sh:
-#   MODEL_SUFFIX=centered_v1 sbatch soccernet_experiment/run_predict.sh
+#   MODEL_SUFFIX=centred_v1 sbatch soccernet_experiment/run_predict.sh
 #
 # MODEL_SUFFIX selects the checkpoint best_attn_dinov3_l_<MODEL_SUFFIX>.pth from
 # TACDEC_MODELS/dinov3_l/ -- set it to YOUR best run's suffix.
@@ -23,7 +23,7 @@ mkdir -p slurm_logs/soccernet
 
 # Mirrors SOCCERNET_EXPERIMENT_DIR in src/config.py — keep in sync.
 EXP_DIR=${EXP_DIR:-/cluster/work/projects/ec12/ec-eirikto/soccernet_thesis_experiment}
-MODEL_SUFFIX=${MODEL_SUFFIX:-centered_v1}
+MODEL_SUFFIX=${MODEL_SUFFIX:-centred_v1}
 MIN_CONFIDENCE=${MIN_CONFIDENCE:-0.5}
 SIGMA=${SIGMA:-1.0}
 MIN_DISTANCE_SEC=${MIN_DISTANCE_SEC:-0.5}
@@ -67,4 +67,4 @@ uv run python -u src/predict_soccernet.py \
     "${MAX_DURATION_ARG[@]}" \
     --out-dir "${OUT_DIR}"
 
-echo "Done. Look in ${OUT_DIR}/ for *_events.txt"
+echo "Done. Look in ${OUT_DIR}/ for *_dinov3_temporal_events.txt"

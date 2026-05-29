@@ -25,7 +25,7 @@ def predictions_to_events_peak(
     Peak-based event detection. Best for anchor-trained models.
     
     Finds local maxima in per-class probability curves. Good when the model 
-    produces peaked outputs centered on event anchors.
+    produces peaked outputs centred on event anchors.
     
     Args:
         probs: Softmax probabilities [Seq_Len, num_classes]

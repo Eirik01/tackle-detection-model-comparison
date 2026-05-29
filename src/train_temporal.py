@@ -22,7 +22,7 @@ only). Game-disjoint 70/15/15 split shared with the spatial probe
 (splits.split_games).
 
 Training-sampler protocol (selected via --protocol):
-  'centered' (default)           : one window per event, class-balanced via
+  'centred' (default)           : one window per event, class-balanced via
       build_balanced_windows in src/data/temporal_protocol.py. Backs the
       headline three-pipeline comparison.
   'kassab_concat' (DINOv3 only)  : strict Kassab TempTAC parity at 5 FPS:
@@ -32,10 +32,10 @@ Training-sampler protocol (selected via --protocol):
 Usage:
   uv run python src/train_temporal.py \
       --backbone-type dinov3 --window-size 10 --fps 5.0 \
-      --protocol centered \
+      --protocol centred \
       --num-epochs 30 --batch-size 64 --learning-rate 1e-4 \
-      --model-suffix centered_v1 --seed 42 \
-      --save-info results/temporal/dinov3_l_centered_v1_train.json
+      --model-suffix centred_v1 --seed 42 \
+      --save-info results/temporal/dinov3_l_centred_v1_train.json
 """
 
 from __future__ import annotations
@@ -134,9 +134,9 @@ def main():
                     help="'kassab_concat' protocol: first-come cap on tackle-replay "
                          "sequences (in data order).")
     ap.add_argument("--protocol",
-                    choices=["centered", "kassab_concat"],
-                    default="centered",
-                    help="Training sampler. 'centered' (default) = one window per "
+                    choices=["centred", "kassab_concat"],
+                    default="centred",
+                    help="Training sampler. 'centred' (default) = one window per "
                          "event, class-balanced (build_balanced_windows); backs the "
                          "headline three-pipeline comparison. 'kassab_concat' = "
                          "strict Kassab TempTAC parity at 5 FPS: per-sequence "
@@ -178,7 +178,7 @@ def main():
                          "and the dataset throughput is the bottleneck.")
     ap.add_argument("--feature-cache", type=int, default=4,
                     help="LRU size (videos held in memory) per loader.")
-    ap.add_argument("--model-suffix", default="centered")
+    ap.add_argument("--model-suffix", default="centred")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--save-info", type=str, default=None)
     ap.add_argument("--padding-mode", choices=["center_crop", "reflect"],
@@ -235,7 +235,7 @@ def main():
     print(f"Protocol:    {args.protocol}")
     print(f"Padding:     {args.padding_mode}"
           + (f"  (loading *_{dense_tag}_dense_* files)" if dense_tag else ""))
-    if args.protocol == "centered":
+    if args.protocol == "centred":
         train_loader, val_loader, test_loader, info = get_balanced_temporal_dataloaders(
             labels_dir=TACDEC_LABELS,
             features_dir=features_dir,
@@ -255,7 +255,7 @@ def main():
             raise NotImplementedError(
                 "kassab_concat is DINOv3-only. V-JEPA 2 pre-extracted dense "
                 "features bake in single-clip temporal context, so cross-clip "
-                "concat windows can't be assembled. Use --protocol centered "
+                "concat windows can't be assembled. Use --protocol centred "
                 "for V-JEPA 2."
             )
         print(f"Caps:        replay_seqs<={args.replay_cap}, "

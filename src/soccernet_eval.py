@@ -47,7 +47,7 @@ def _build_clip_vectors(
     Returns
     -------
     target : (seq_len, num_action_classes) ndarray
-        1.0 at frames where a GT event of that class is centered, 0 elsewhere.
+        1.0 at frames where a GT event of that class is centred, 0 elsewhere.
     detection : (seq_len, num_action_classes) ndarray
         Confidence at frames with a predicted peak, -1 elsewhere (placeholder
         for "no detection" expected by SoccerNet's compute_class_scores).

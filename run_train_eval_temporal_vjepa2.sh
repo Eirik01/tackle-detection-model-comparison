@@ -23,14 +23,14 @@ source setup.sh
 mkdir -p slurm_logs/train_eval/temporal results/temporal
 
 # Usage:
-#   sbatch run_train_eval_temporal_vjepa2.sh                          # defaults (centered)
-#   sbatch run_train_eval_temporal_vjepa2.sh centered_v2 50 64        # custom suffix / epochs / batch
+#   sbatch run_train_eval_temporal_vjepa2.sh                          # defaults (centred)
+#   sbatch run_train_eval_temporal_vjepa2.sh centred_v2 50 64        # custom suffix / epochs / batch
 #
-# V-JEPA 2 only supports --protocol centered: its dense features are pre-extracted
+# V-JEPA 2 only supports --protocol centred: its dense features are pre-extracted
 # per clip, so the kassab_concat cross-clip parity protocol is DINOv3-only.
 
 BACKBONE_TYPE=vjepa2
-MODEL_SUFFIX=${1:-centered_v1}
+MODEL_SUFFIX=${1:-centred_v1}
 NUM_EPOCHS=${2:-30}
 BATCH_SIZE=${3:-64}
 # Selected hyperparameters from sweeps/vjepa2_l/seed42/selection.json under
@@ -42,8 +42,8 @@ BATCH_SIZE=${3:-64}
 LEARNING_RATE=${4:-3e-4}
 SEED=${5:-42}
 WEIGHT_DECAY=${6:-1e-2}
-PROTOCOL=${PROTOCOL:-centered}
-# Caps are no-ops for V-JEPA 2 (centered ignores them); kept only so the shared
+PROTOCOL=${PROTOCOL:-centred}
+# Caps are no-ops for V-JEPA 2 (centred ignores them); kept only so the shared
 # --replay-cap/--bg-count flags below have values. Kassab Table 7.6 defaults.
 REPLAY_CAP=${REPLAY_CAP:-280}
 BG_COUNT=${BG_COUNT:-500}

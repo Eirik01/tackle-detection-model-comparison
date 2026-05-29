@@ -21,7 +21,7 @@ detection there.
 Usage (see soccernet_experiment/run_predict.sh):
   uv run python src/predict_soccernet.py \
       --features-dir /cluster/.../soccernet_thesis_experiment/features \
-      --model-suffix centered_v1 \
+      --model-suffix centred_v1 \
       --min-confidence 0.5 \
       --out-dir /cluster/.../soccernet_thesis_experiment/predictions
 
@@ -65,7 +65,7 @@ def main():
                     help="Feature-file stem (the .mp4 filename without extension). "
                          "If omitted, auto-detected from the single dense .npy in "
                          "--features-dir matching the configured fps + padding.")
-    ap.add_argument("--model-suffix", default="centered_v1",
+    ap.add_argument("--model-suffix", default="centred_v1",
                     help="Checkpoint suffix: loads best_attn_dinov3_l_<suffix>.pth "
                          "from TACDEC_MODELS/dinov3_l/. Set to your best run.")
     ap.add_argument("--backbone-size", default="large",
@@ -233,7 +233,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = args.video_id
 
-    txt_path = out_dir / f"{stem}_events.txt"
+    txt_path = out_dir / f"{stem}_dinov3_temporal_events.txt"
     with open(txt_path, "w") as f:
         f.write(f"# Fired tackle events for '{stem}'\n")
         f.write(f"# checkpoint        : {ckpt_path}\n")
@@ -268,15 +268,15 @@ def main():
                     "anchor_idx": d["anchor"],
                 })
 
-    csv_fired = out_dir / f"{stem}_events.csv"
-    csv_all = out_dir / f"{stem}_events_all.csv"
+    csv_fired = out_dir / f"{stem}_dinov3_temporal_events.csv"
+    csv_all = out_dir / f"{stem}_dinov3_temporal_events_all.csv"
     _write_csv(csv_fired, fired)
     _write_csv(csv_all, detections)
     print(f"  wrote {csv_fired}")
     print(f"  wrote {csv_all}  (every peak, re-threshold without re-running)")
 
     # Small machine-readable run summary.
-    (out_dir / f"{stem}_predict_summary.json").write_text(json.dumps({
+    (out_dir / f"{stem}_dinov3_temporal_predict_summary.json").write_text(json.dumps({
         "video_id": stem,
         "checkpoint": str(ckpt_path),
         "n_source_rows": n_source,

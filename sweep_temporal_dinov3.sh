@@ -44,7 +44,7 @@ BACKBONE_SIZE="large"
 WINDOW_SIZE=10
 FPS=5.0
 SOURCE_FPS=25.0
-PROTOCOL=${PROTOCOL:-centered}
+PROTOCOL=${PROTOCOL:-centred}
 FEATURE_CACHE=${FEATURE_CACHE:-8}
 NUM_WORKERS=${NUM_WORKERS:-4}
 # Extraction flavour to load: reflect-padded dense files by default. Set

@@ -22,7 +22,7 @@ SoccerNetv2_password=<the SoccerNet-v2 password>
 
 Confirm your best checkpoint exists at
 `/cluster/work/projects/ec12/ec-eirikto/TACDEC/models/dinov3_l/best_attn_dinov3_l_<SUFFIX>.pth`
-and note its `<SUFFIX>` (passed as `MODEL_SUFFIX`, default `centered_v1`).
+and note its `<SUFFIX>` (passed as `MODEL_SUFFIX`, default `centred_v1`).
 
 ## Run order (from `tackle-detection-model-comparison/`)
 
@@ -34,7 +34,7 @@ uv run python soccernet_experiment/download_half.py
 sbatch soccernet_experiment/run_extract.sh
 
 # 3. Predict fired events  (GPU) — set MODEL_SUFFIX to your best run
-MODEL_SUFFIX=centered_v1 sbatch soccernet_experiment/run_predict.sh
+MODEL_SUFFIX=centred_v1 sbatch soccernet_experiment/run_predict.sh
 ```
 
 Everything lands under `EXP_DIR` (default
@@ -46,10 +46,10 @@ soccernet_thesis_experiment/
 ├── europe_uefa-champions-league/2016-2017/.../2_720p.mkv   # SoccerNet's nested layout
 ├── features/2_720p_dinov3_l_25.0fps_reflect_dense_features.npy
 └── predictions/
-    ├── 2_720p_events.txt        # human-readable fired events  <-- read this
-    ├── 2_720p_events.csv        # fired events (conf >= threshold)
-    ├── 2_720p_events_all.csv    # every peak (re-threshold offline)
-    └── 2_720p_predict_summary.json
+    ├── 2_720p_dinov3_temporal_events.txt        # human-readable fired events  <-- read this
+    ├── 2_720p_dinov3_temporal_events.csv        # fired events (conf >= threshold)
+    ├── 2_720p_dinov3_temporal_events_all.csv    # every peak (re-threshold offline)
+    └── 2_720p_dinov3_temporal_predict_summary.json
 ```
 
 ## The output

@@ -46,4 +46,4 @@ uv run python -u src/predict_soccernet_spatial.py \
     --min-segment-frames "${MIN_SEGMENT_FRAMES}" \
     --out-dir "${OUT_DIR}"
 
-echo "Done. Look in ${OUT_DIR}/ for *_spatial_events.txt"
+echo "Done. Look in ${OUT_DIR}/ for *_dinov3_spatial_events.txt"

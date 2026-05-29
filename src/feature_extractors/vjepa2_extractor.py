@@ -27,7 +27,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
     
     Window extraction strategy:
     - Reads all frames from video at original FPS
-    - Creates 16-frame sliding windows centered on each output frame
+    - Creates 16-frame sliding windows centred on each output frame
     - Pads with zero frames at video boundaries for alignment
     - Stride is auto-calculated to match target output FPS
     

@@ -156,7 +156,7 @@ def get_kassab_concat_temporal_dataloaders(
             "kassab_concat is DINOv3-only. V-JEPA 2 dense features bake in "
             "single-clip temporal context (one feature row per pre-extracted "
             "tubelet), so cross-clip windows can't be assembled from the "
-            "existing extraction. Use --protocol centered for V-JEPA 2."
+            "existing extraction. Use --protocol centred for V-JEPA 2."
         )
     if window_size != PROTO_W:
         raise ValueError(
