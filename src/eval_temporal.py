@@ -43,7 +43,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 from config import RESULTS_DIR, TACDEC_FEATURES, TACDEC_LABELS, TACDEC_MODELS
 from data.balanced_temporal_dataset import (
     get_balanced_temporal_dataloaders,
-    get_sliding_temporal_dataloaders,
 )
 from data.kassab_attentive_dataset import (
     CLASS_NAMES,
@@ -171,7 +170,7 @@ def rebuild_probe(ckpt: dict):
 # ---- Report 1: per-window classification on the protocol's test pool --------
 # Each test row is one window with one center-frame label and one argmax
 # prediction, so the classification_report's support column is also the
-# frame-prediction count on that pool. Under --protocol sliding_seq this is
+# frame-prediction count on that pool. Under --protocol kassab_concat this is
 # directly comparable to Kassab TempTAC's frame-level classification_report,
 # both in scope (capped sequences) and in unit (one prediction per frame).
 
@@ -500,25 +499,22 @@ def main():
     ap.add_argument("--window-size", type=int, default=10,
                     help="W (default 10; 5 FPS * 2 s, even).")
     ap.add_argument("--protocol",
-                    choices=["centered", "sliding", "sliding_seq",
-                             "sliding_balanced", "kassab_concat"],
+                    choices=["centered", "kassab_concat"],
                     default="centered",
                     help="Test-pool sampler for the 'balanced' track only. Should "
-                         "match the protocol used at training time. 'sliding_seq' "
-                         "applies Kassab-style caps at sequence granularity and "
-                         "then explodes kept sequences into stride-1 windows. "
-                         "'kassab_concat' is strict Kassab TempTAC parity at "
-                         "5 FPS (cross-clip concat-and-slide, DINOv3-only) -- "
-                         "use this for direct comparison against Kassab's "
-                         "frame-level classification_report. The 'frame_full' "
-                         "and 'event' tracks are protocol-independent (always "
-                         "dense stride-1 per clip).")
+                         "match the protocol used at training time. 'kassab_concat' "
+                         "is strict Kassab TempTAC parity at 5 FPS (cross-clip "
+                         "concat-and-slide, DINOv3-only) -- use this for direct "
+                         "comparison against Kassab's frame-level "
+                         "classification_report. The 'frame_full' and 'event' "
+                         "tracks are protocol-independent (always dense stride-1 "
+                         "per clip).")
     ap.add_argument("--replay-cap", type=int, default=280,
-                    help="'sliding' protocol, 'balanced' track: replay-window cap "
-                         "for the test pool.")
+                    help="'kassab_concat' protocol, 'balanced' track: replay-sequence "
+                         "cap for the test pool.")
     ap.add_argument("--bg-count", type=int, default=500,
-                    help="'sliding' protocol, 'balanced' track: background-window "
-                         "count for the test pool.")
+                    help="'kassab_concat' protocol, 'balanced' track: background-"
+                         "sequence count for the test pool.")
     ap.add_argument("--batch-size", type=int, default=64,
                     help="'balanced' track batch size.")
     ap.add_argument("--feature-cache", type=int, default=4)
@@ -656,32 +652,9 @@ def main():
                 split_file=args.split_file,
                 split_mode=args.split_mode,
             )
-        elif args.protocol in ("sliding", "sliding_seq", "sliding_balanced"):
-            balance = {
-                "sliding":          "kassab_caps",
-                "sliding_seq":      "kassab_seq_caps",
-                "sliding_balanced": "balanced",
-            }[args.protocol]
-            _, _, test_loader, info = get_sliding_temporal_dataloaders(
-                labels_dir=TACDEC_LABELS,
-                features_dir=features_dir,
-                backbone=backbone,
-                window_size=args.window_size,
-                target_fps=args.fps,
-                source_fps=eff_source_fps,
-                seed=args.seed,
-                batch_size=args.batch_size,
-                num_workers=args.num_workers,
-                feature_loader_cache=args.feature_cache,
-                dense_tag=dense_tag,
-                balance=balance,
-                replay_cap=args.replay_cap,
-                bg_count=args.bg_count,
-                split_file=args.split_file,
-            )
         else:
             raise NotImplementedError(
-                f"--protocol {args.protocol!r} not wired in eval yet (Step 4 'temptac')."
+                f"--protocol {args.protocol!r} not wired in eval."
             )
         test_windows = info["_splits"]["test"]
         print(f"\n[balanced] test pool: {len(test_windows)} windows "
@@ -691,11 +664,7 @@ def main():
         )
 
         print("\n" + "=" * 60)
-        if args.protocol == "sliding_seq":
-            unit_note = ("sequence-exploded stride-1 windows; support column = "
-                         "per-frame predictions on capped test sequences "
-                         "(Kassab TempTAC parity)")
-        elif args.protocol == "kassab_concat":
+        if args.protocol == "kassab_concat":
             unit_note = ("cross-clip concat-and-slide windows; support column "
                          "= one prediction per global-stream window (strict "
                          "Kassab TempTAC parity at 5 FPS)")
@@ -906,7 +875,7 @@ def main():
 
         # Fresh DataLoader at the profile batch size, reusing the same balanced
         # test pool used by Track 1. Centered protocol is the canonical one for
-        # both backbones; sliding/sliding_seq are also supported.
+        # both backbones; kassab_concat (DINOv3-only) is also supported.
         if args.protocol == "centered":
             _, _, prof_loader, _ = get_balanced_temporal_dataloaders(
                 labels_dir=TACDEC_LABELS,
@@ -920,29 +889,6 @@ def main():
                 num_workers=args.num_workers,
                 feature_loader_cache=args.feature_cache,
                 dense_tag=dense_tag,
-                split_file=args.split_file,
-            )
-        elif args.protocol in ("sliding", "sliding_seq", "sliding_balanced"):
-            balance = {
-                "sliding":          "kassab_caps",
-                "sliding_seq":      "kassab_seq_caps",
-                "sliding_balanced": "balanced",
-            }[args.protocol]
-            _, _, prof_loader, _ = get_sliding_temporal_dataloaders(
-                labels_dir=TACDEC_LABELS,
-                features_dir=features_dir,
-                backbone=backbone,
-                window_size=args.window_size,
-                target_fps=args.fps,
-                source_fps=eff_source_fps,
-                seed=args.seed,
-                batch_size=PROFILE_BATCH_SIZE,
-                num_workers=args.num_workers,
-                feature_loader_cache=args.feature_cache,
-                dense_tag=dense_tag,
-                balance=balance,
-                replay_cap=args.replay_cap,
-                bg_count=args.bg_count,
                 split_file=args.split_file,
             )
         elif args.protocol == "kassab_concat":

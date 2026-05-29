@@ -22,21 +22,12 @@ only). Game-disjoint 70/15/15 split shared with the spatial probe
 (spatial_protocol.split_games).
 
 Training-sampler protocol (selected via --protocol):
-  'centered' (default, Step 1)   : one window per event, class-balanced via
-      build_balanced_windows in src/data/temporal_protocol.py.
-  'sliding'  (Step 3)            : per-clip stride-1 W=10 windows with
-      Kassab-style caps at window granularity (live uncapped, replay capped
-      at --replay-cap windows, background sampled to --bg-count windows),
-      build_sliding_training_windows(balance='kassab_caps').
-  'sliding_seq'                  : Kassab TempTAC parity. Caps applied at
-      sequence granularity (live uncapped, replay first-come up to
-      --replay-cap sequences, background sampled to --bg-count sequences),
-      then every kept sequence is exploded to its stride-1 windows.
-      build_sliding_training_windows(balance='kassab_seq_caps').
-  'sliding_balanced'             : per-clip stride-1 W=10 windows, every class
-      downsampled to min(|live|, |replay|, |bg|) (fully class-balanced).
-  'temptac'  (DINOv3 only, NYI)  : Kassab-faithful concat+slide W=50 @
-      25 FPS with cell-7 sampling. Not yet wired.
+  'centered' (default)           : one window per event, class-balanced via
+      build_balanced_windows in src/data/temporal_protocol.py. Backs the
+      headline three-pipeline comparison.
+  'kassab_concat' (DINOv3 only)  : strict Kassab TempTAC parity at 5 FPS:
+      per-sequence retention rule (5-frame bg slice, whole tackle sequences)
+      plus cross-clip concat-and-slide. Auxiliary parity experiment.
 
 Usage:
   uv run python src/train_temporal.py \
@@ -61,7 +52,6 @@ from sklearn.metrics import f1_score
 from config import TACDEC_FEATURES, TACDEC_LABELS, TACDEC_MODELS
 from data.balanced_temporal_dataset import (
     get_balanced_temporal_dataloaders,
-    get_sliding_temporal_dataloaders,
 )
 from data.kassab_attentive_dataset import (
     CLASS_NAMES,
@@ -138,32 +128,21 @@ def main():
                     help="W: frames per window (5 FPS * 2 s = 10 default; even, required "
                          "by V-JEPA2 tubelet=2).")
     ap.add_argument("--bg-count", type=int, default=500,
-                    help="'sliding' protocol: number of background windows sampled "
-                         "(without replacement) from eligible anchors. Also used by "
-                         "'temptac' (Step 4) for random background chunks.")
+                    help="'kassab_concat' protocol: number of random background "
+                         "sequences sampled (without replacement).")
     ap.add_argument("--replay-cap", type=int, default=280,
-                    help="'sliding' protocol: first-come cap on tackle-replay windows "
-                         "(in data order). Also used by 'temptac' (Step 4).")
+                    help="'kassab_concat' protocol: first-come cap on tackle-replay "
+                         "sequences (in data order).")
     ap.add_argument("--protocol",
-                    choices=["centered", "sliding", "sliding_seq",
-                             "sliding_balanced", "kassab_concat"],
+                    choices=["centered", "kassab_concat"],
                     default="centered",
-                    help="Training sampler. 'centered' = one window per event, "
-                         "class-balanced (build_balanced_windows). 'sliding' = "
-                         "stride-1 windows over every clip with Kassab-style caps "
-                         "at WINDOW granularity (live uncapped, replay capped at "
-                         "--replay-cap windows, background sampled to --bg-count "
-                         "windows). 'sliding_seq' = Kassab TempTAC parity: caps "
-                         "applied at SEQUENCE granularity (live uncapped, replay "
-                         "first-come up to --replay-cap sequences, background "
-                         "sampled to --bg-count sequences); each kept sequence is "
-                         "then exploded to its stride-1 windows. "
-                         "'sliding_balanced' = stride-1 windows, every class "
-                         "downsampled to min(|live|, |replay|, |bg|) (caps "
-                         "ignored). 'kassab_concat' = strict Kassab TempTAC "
-                         "parity at 5 FPS: per-sequence retention rule (5-frame "
-                         "bg slice, whole tackle sequences) + cross-clip concat-"
-                         "and-slide. DINOv3-only.")
+                    help="Training sampler. 'centered' (default) = one window per "
+                         "event, class-balanced (build_balanced_windows); backs the "
+                         "headline three-pipeline comparison. 'kassab_concat' = "
+                         "strict Kassab TempTAC parity at 5 FPS: per-sequence "
+                         "retention rule (5-frame bg slice, whole tackle sequences) "
+                         "+ cross-clip concat-and-slide. DINOv3-only; auxiliary "
+                         "parity experiment.")
 
     # Probe (DINOv3 paper recipe; reused for both backbones where applicable).
     ap.add_argument("--probe-num-heads", type=int, default=16)
@@ -276,7 +255,7 @@ def main():
             raise NotImplementedError(
                 "kassab_concat is DINOv3-only. V-JEPA 2 pre-extracted dense "
                 "features bake in single-clip temporal context, so cross-clip "
-                "concat windows can't be assembled. Use --protocol sliding_seq "
+                "concat windows can't be assembled. Use --protocol centered "
                 "for V-JEPA 2."
             )
         print(f"Caps:        replay_seqs<={args.replay_cap}, "
@@ -303,42 +282,8 @@ def main():
               + ("  (replicates Kassab's extract_data bug; NOT game-disjoint)"
                  if args.split_mode == "kassab_bug" else
                  "  (real game-disjoint partition)"))
-    elif args.protocol in ("sliding", "sliding_seq", "sliding_balanced"):
-        balance = {
-            "sliding":          "kassab_caps",
-            "sliding_seq":      "kassab_seq_caps",
-            "sliding_balanced": "balanced",
-        }[args.protocol]
-        if balance == "kassab_caps":
-            print(f"Caps:        replay<={args.replay_cap}, bg={args.bg_count} "
-                  f"(live uncapped, window-level)")
-        elif balance == "kassab_seq_caps":
-            print(f"Caps:        replay_seqs<={args.replay_cap}, "
-                  f"bg_seqs={args.bg_count} (live seqs uncapped; "
-                  f"sequence-level)")
-        else:
-            print("Balance:     fully balanced (every class -> min pool size; caps ignored)")
-        train_loader, val_loader, test_loader, info = get_sliding_temporal_dataloaders(
-            labels_dir=TACDEC_LABELS,
-            features_dir=features_dir,
-            backbone=args.backbone_type,
-            window_size=args.window_size,
-            target_fps=args.fps,
-            source_fps=eff_source_fps,
-            seed=args.seed,
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-            feature_loader_cache=args.feature_cache,
-            dense_tag=dense_tag,
-            balance=balance,
-            replay_cap=args.replay_cap,
-            bg_count=args.bg_count,
-            split_file=args.split_file,
-        )
     else:
-        raise NotImplementedError(
-            f"--protocol {args.protocol!r} not yet wired. 'temptac' lands in Step 4."
-        )
+        raise NotImplementedError(f"--protocol {args.protocol!r} not wired.")
     print(f"Sequences per split: {info['n_sequences']}")
     for split, counts in info["frame_counts_per_split"].items():
         names = [CLASS_NAMES[c] for c in (0, 1, 2)]

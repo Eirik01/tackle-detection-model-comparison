@@ -18,16 +18,8 @@ source setup.sh
 mkdir -p slurm_logs/train_eval/temporal results/temporal
 
 # Usage:
-#   sbatch run_train_eval_temporal_dinov3.sh                          # defaults
-#   sbatch run_train_eval_temporal_dinov3.sh sliding_v1 50 64         # custom suffix / epochs / batch
-#   PROTOCOL=sliding sbatch run_train_eval_temporal_dinov3.sh sliding_v1
-#   PROTOCOL=temptac sbatch run_train_eval_temporal_dinov3.sh temptac_v1
-#
-# Kassab TempTAC parity, sequence-cap variant (per-clip boundary enforced):
-#   PROTOCOL=sliding_seq \
-#   CE_WEIGHT_STYLE=balanced \
-#   SPLIT_FILE=data/kassab_split.json \
-#   sbatch run_train_eval_temporal_dinov3.sh kassab_parity_v1
+#   sbatch run_train_eval_temporal_dinov3.sh                          # defaults (centered)
+#   sbatch run_train_eval_temporal_dinov3.sh centered_v2 50 64        # custom suffix / epochs / batch
 #
 # Kassab TempTAC parity, STRICT concat-and-slide (cross-clip windows, DINOv3-only):
 #   PROTOCOL=kassab_concat \
@@ -56,7 +48,7 @@ LEARNING_RATE=${4:-1e-4}
 SEED=${5:-42}
 WEIGHT_DECAY=${6:-1e-2}
 PROTOCOL=${PROTOCOL:-centered}
-# 'sliding' protocol caps (ignored by 'centered'). Kassab Table 7.6 defaults.
+# 'kassab_concat' protocol caps (ignored by 'centered'). Kassab Table 7.6 defaults.
 REPLAY_CAP=${REPLAY_CAP:-280}
 BG_COUNT=${BG_COUNT:-500}
 FEATURE_CACHE=${FEATURE_CACHE:-8}

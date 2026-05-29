@@ -23,17 +23,11 @@ source setup.sh
 mkdir -p slurm_logs/train_eval/temporal results/temporal
 
 # Usage:
-#   sbatch run_train_eval_temporal_vjepa2.sh                          # defaults
-#   sbatch run_train_eval_temporal_vjepa2.sh sliding_v1 50 64         # custom suffix / epochs / batch
-#   PROTOCOL=sliding sbatch run_train_eval_temporal_vjepa2.sh sliding_v1
-# Note: V-JEPA 2 cannot run --protocol temptac (would need W=50 @ 25 FPS
-# re-extraction; not supported).
+#   sbatch run_train_eval_temporal_vjepa2.sh                          # defaults (centered)
+#   sbatch run_train_eval_temporal_vjepa2.sh centered_v2 50 64        # custom suffix / epochs / batch
 #
-# Kassab TempTAC parity (sequence-cap, sklearn 'balanced' CE weights, fixed split):
-#   PROTOCOL=sliding_seq \
-#   CE_WEIGHT_STYLE=balanced \
-#   SPLIT_FILE=data/kassab_split.json \
-#   sbatch run_train_eval_temporal_vjepa2.sh kassab_parity_v1
+# V-JEPA 2 only supports --protocol centered: its dense features are pre-extracted
+# per clip, so the kassab_concat cross-clip parity protocol is DINOv3-only.
 
 BACKBONE_TYPE=vjepa2
 MODEL_SUFFIX=${1:-centered_v1}
@@ -49,7 +43,8 @@ LEARNING_RATE=${4:-3e-4}
 SEED=${5:-42}
 WEIGHT_DECAY=${6:-1e-2}
 PROTOCOL=${PROTOCOL:-centered}
-# 'sliding' protocol caps (ignored by 'centered'). Kassab Table 7.6 defaults.
+# Caps are no-ops for V-JEPA 2 (centered ignores them); kept only so the shared
+# --replay-cap/--bg-count flags below have values. Kassab Table 7.6 defaults.
 REPLAY_CAP=${REPLAY_CAP:-280}
 BG_COUNT=${BG_COUNT:-500}
 FEATURE_CACHE=${FEATURE_CACHE:-6}

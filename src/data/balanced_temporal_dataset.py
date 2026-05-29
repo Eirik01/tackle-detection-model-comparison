@@ -38,14 +38,12 @@ from data.temporal_protocol import (
     STRIDE_S,
     W as PROTO_W,
     build_balanced_windows,
-    build_sliding_training_windows,
     split_games,
     split_games_from_file,
 )
 
 __all__ = [
     "get_balanced_temporal_dataloaders",
-    "get_sliding_temporal_dataloaders",
 ]
 
 
@@ -106,8 +104,7 @@ def _assemble_loaders(
 ):
     """Shared back end for the temporal dataloaders.
 
-    Takes per-split ``(clip_id, center, class)`` tuples (the only thing the
-    'balanced' and 'sliding' samplers differ on) and builds the loaders +
+    Takes per-split ``(clip_id, center, class)`` tuples and builds the loaders +
     info dict. ``splits`` is the clip-id partition, used only for the game-ID
     audit in ``info``.
     """
@@ -252,88 +249,3 @@ def get_balanced_temporal_dataloaders(
         seed=seed,
     )
 
-
-def get_sliding_temporal_dataloaders(
-    labels_dir,
-    features_dir,
-    backbone: str,
-    window_size: int = PROTO_W,
-    target_fps: float = 5.0,
-    source_fps: float | None = None,
-    train_frac: float = 0.70,
-    val_frac: float = 0.15,
-    seed: int = 42,
-    batch_size: int = 64,
-    num_workers: int = 0,
-    feature_loader_cache: int = 4,
-    dense_tag: str = "",
-    balance: str = "kassab_caps",
-    replay_cap: int = 280,
-    bg_count: int = 500,
-    split_file: str | Path | None = None,
-):
-    """Build train/val/test loaders for the sliding-windows attentive probe.
-
-    Same item contract and split as ``get_balanced_temporal_dataloaders``; the
-    per-split windows come from ``build_sliding_training_windows``. Three
-    balancing modes:
-
-      * ``balance='kassab_caps'``     — Kassab-style caps lifted to window
-        granularity (live uncapped, replay capped at ``replay_cap``, background
-        sampled to ``bg_count``); foreground-heavy. Protocol name in ``info``
-        and the checkpoint = ``'sliding'``.
-      * ``balance='kassab_seq_caps'`` — Kassab TempTAC parity: caps applied at
-        the sequence level (live uncapped, replay first-come up to
-        ``replay_cap`` sequences, background sampled to ``bg_count``
-        sequences), then every kept sequence is exploded to its stride-1
-        windows. Protocol name = ``'sliding_seq'``.
-      * ``balance='balanced'``        — every class downsampled to
-        ``min(|live|, |replay|, |bg|)``; class-balanced training distribution.
-        ``replay_cap`` / ``bg_count`` are ignored. Protocol name =
-        ``'sliding_balanced'``.
-
-    Works for both backbones unchanged: a sliding anchor ``c`` resolves through
-    the same loaders as any other window center (DINOv3 gathers W source frames
-    around ``c``; V-JEPA 2 indexes the pre-extracted dense row for ``c``).
-
-    Returns ``(train_loader, val_loader, test_loader, info)``.
-    """
-    label_dir, splits = _validate_and_split(
-        backbone, window_size, labels_dir, train_frac, val_frac, seed,
-        split_file=split_file,
-    )
-    split_tuples = {
-        name: build_sliding_training_windows(
-            clip_ids, label_dir, seed=seed,
-            balance=balance,
-            replay_cap=replay_cap, bg_count=bg_count,
-        )
-        for name, clip_ids in splits.items()
-    }
-    eff_source_fps = source_fps if source_fps is not None else target_fps
-    protocol_name = {
-        "kassab_caps":     "sliding",
-        "kassab_seq_caps": "sliding_seq",
-        "balanced":        "sliding_balanced",
-    }[balance]
-    train_loader, val_loader, test_loader, info = _assemble_loaders(
-        split_tuples=split_tuples,
-        splits=splits,
-        label_dir=label_dir,
-        features_dir=features_dir,
-        backbone=backbone,
-        window_size=window_size,
-        target_fps=target_fps,
-        eff_source_fps=eff_source_fps,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        feature_loader_cache=feature_loader_cache,
-        dense_tag=dense_tag,
-        protocol_name=protocol_name,
-        seed=seed,
-    )
-    info["balance"] = balance
-    if balance in ("kassab_caps", "kassab_seq_caps"):
-        info["replay_cap"] = replay_cap
-        info["bg_count"] = bg_count
-    return train_loader, val_loader, test_loader, info
