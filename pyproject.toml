@@ -1,0 +1,23 @@
+[project]
+name = "dinov3-action-spotting"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+
+dependencies = [
+    "imutils==0.5.4",
+    "numpy==2.3.3",
+    "opencv-python==4.11.0.86",
+    "pillow==11.3.0",
+    "python-dotenv==1.1.1",
+    "scikit-learn==1.7.2",
+    "scikit-video==1.1.11",
+    "scipy>=1.14.0",
+    "soccernet==0.1.62",
+    "torch==2.8.0",
+    "tqdm==4.66.5",
+    "transformers==4.57.0",
+    "moviepy==1.0.3",
+    "torchvision==0.23.0",
+    "ultralytics>=8.4.45",
+    "timm>=1.0.26",
+]
