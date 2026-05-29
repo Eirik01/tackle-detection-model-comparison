@@ -10,7 +10,7 @@ separation can be compared visually.
 
 Run on fox (where the dense caches live):
 
-    cd <repo>/thesis_code
+    cd /path/to/tackle-detection-model-comparison
     python visualization/feature_clustering_dense.py 2>&1 | tee /tmp/feature_clustering_dense.log
 
 Outputs:

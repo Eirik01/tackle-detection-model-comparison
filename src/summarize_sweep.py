@@ -15,7 +15,7 @@ Auto-detects which run-file layout each combo uses:
   * temporal pipeline writes `train.json` only; per-epoch values are scraped
     from the matching slurm .out file (matched on the "LR / WD: ..." line)
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     # spatial (no log needed)
     python -m src.summarize_sweep \\
         --sweep-dir /cluster/.../sweeps/dinov3_linear_spatial/seed42

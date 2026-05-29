@@ -38,7 +38,7 @@ post-hoc temporal aggregation does not help on this task.
 ## Repository layout
 
 ```
-foundation-models-tackle-detection/
+tackle-detection-model-comparison/
 ├── src/                          # the pipeline package
 │   ├── config.py                 # ── single source of truth for all paths & backbone config
 │   ├── feature_extractors/       # Stage 1: frozen backbones → cached features

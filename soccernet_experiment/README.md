@@ -14,7 +14,7 @@ so you verify the fired events manually.
 
 ## One-time prerequisites
 
-Add the SoccerNet password to `thesis_code/.env` (same file as `DINOv3_key`):
+Add the SoccerNet password to `tackle-detection-model-comparison/.env` (same file as `DINOv3_key`):
 
 ```
 SoccerNetv2_password=<the SoccerNet-v2 password>
@@ -24,7 +24,7 @@ Confirm your best checkpoint exists at
 `/cluster/work/projects/ec12/ec-eirikto/TACDEC/models/dinov3_l/best_attn_dinov3_l_<SUFFIX>.pth`
 and note its `<SUFFIX>` (passed as `MODEL_SUFFIX`, default `centered_v1`).
 
-## Run order (from `thesis_code/`)
+## Run order (from `tackle-detection-model-comparison/`)
 
 ```bash
 # 1. Download + symlink the half  (LOGIN NODE — compute nodes have no internet)

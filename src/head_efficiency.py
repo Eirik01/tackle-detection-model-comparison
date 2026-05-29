@@ -15,7 +15,7 @@ already cached on disk, so the head consumes pre-extracted tensors):
 
 Latency percentiles, FLOPs, MACs, throughput and RTF are intentionally not
 computed. Results are appended to a single CSV at
-``thesis_code/results/head_efficiency.csv``.
+``tackle-detection-model-comparison/results/head_efficiency.csv``.
 
 The profiler is GPU-only: calling it without CUDA raises RuntimeError with a
 clear message. It does not interfere with training or the existing eval loop.

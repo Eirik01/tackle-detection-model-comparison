@@ -16,7 +16,7 @@ subsampling) and reports three views:
    segment-based postprocessor (interval-trained probe -> plateau output);
    results are written to `eval_events.json`.
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     python src/eval_spatial.py --run-dir results/dinov3_linear_spatial/run_<timestamp>
 """
 

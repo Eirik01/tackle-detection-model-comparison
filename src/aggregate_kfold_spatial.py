@@ -12,7 +12,7 @@ for:
 Per-class precision and recall are derived from the confusion matrix stored in
 each eval JSON, so no upstream change is required.
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     python -m src.aggregate_kfold_spatial --base-dir <path>
 """
 

@@ -14,7 +14,7 @@ The selected combo is the "base" config frozen for all later experiments
 (single-split protocol: train fits the probe, val selects (lr, wd), test is
 touched once afterwards).
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     python -m src.select_hparams --sweep-dir <dir> [--pipeline spatial|temporal]
 
 Reads per combo:

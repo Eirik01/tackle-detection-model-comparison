@@ -6,7 +6,7 @@ that train_temporal.py and eval_temporal.py use, so a green run here means
 clip's feature path.
 
 Usage on Fox:
-    cd /path/to/thesis_code
+    cd /path/to/tackle-detection-model-comparison
     uv run python tests/check_reflect_features.py
     uv run python tests/check_reflect_features.py --backbone vjepa2
     uv run python tests/check_reflect_features.py --backbone both --limit 5

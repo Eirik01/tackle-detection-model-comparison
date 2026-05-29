@@ -6,7 +6,7 @@ SoccerNet's downloader places the file at
   <SOCCERNET_EXPERIMENT_DIR>/<GAME path>/2_720p.mkv
 and the extractor's rglob picks it up from there. No moving / renaming.
 
-Needs SoccerNetv2_password in thesis_code/.env. Run on the login node:
+Needs SoccerNetv2_password in tackle-detection-model-comparison/.env. Run on the login node:
   uv run python soccernet_experiment/download_half.py
 """
 

@@ -7,7 +7,7 @@ and comparing the CLS vector against the corresponding row of the stacked tensor
 Run on the cluster (or wherever you have TACDEC videos + HF token + a GPU
 ideally). Picks the first video alphabetically and an interior frame.
 
-Invoke as a module from the repo root (thesis_code/):
+Invoke as a module from the repo root (tackle-detection-model-comparison/):
     uv run python -m src.verify_dinov3_kassab_features
 """
 from pathlib import Path

@@ -1,5 +1,5 @@
 """
-Central configuration for dinov3-action-spotting project.
+Central configuration for the tackle-detection-model-comparison project.
 All paths and settings should be defined here.
 """
 from pathlib import Path

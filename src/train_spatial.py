@@ -12,7 +12,7 @@ Protocol:
    validation loss has not improved for --patience epochs.
 5. Evaluate the macro-F1-best checkpoint on the balanced test pool.
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     python src/train_spatial.py [--flags ...]
 """
 

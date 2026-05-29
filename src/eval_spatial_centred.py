@@ -15,7 +15,7 @@ convention. All other model and data settings mirror the existing spatial /
 temporal evals, so the produced JSON can be paired with a temporal
 `eval_test.json` for a window-by-window analysis.
 
-Run from thesis_code/ as:
+Run from tackle-detection-model-comparison/ as:
     uv run python -u src/eval_spatial_centred.py \\
         --spatial-checkpoint <path-to-model.pt> \\
         --seed 42 \\

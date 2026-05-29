@@ -23,7 +23,7 @@ training and eval to remove the split mismatch from the comparison.
 Usage:
   uv run python dump_kassab_split.py \
       --labels-dir /path/to/TACDEC/labels \
-      --output thesis_code/data/kassab_split.json
+      --output tackle-detection-model-comparison/data/kassab_split.json
 """
 
 from __future__ import annotations
