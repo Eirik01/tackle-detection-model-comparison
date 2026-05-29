@@ -341,12 +341,10 @@ if __name__ == "__main__":
     # comparison lives in feature_clustering_dense.py.
     # DINOv3 CLS files are extracted at 25 FPS (see eval_spatial_centred.py).
     print("Extracting testing features for DINOv3 (CLS, 25 FPS — linear probe input)...")
-    # temporal_head='linear' disables the 16-frame sliding window the default
-    # 'lstm' head applies; we want raw per-frame CLS, not a 16xD stack.
+    # get_dataloaders returns raw per-frame CLS features (one row per frame).
     loaders_dino = get_dataloaders(batch_size=8, backbone_type='dinov3',
                                    backbone_size='large', num_classes=3,
-                                   extraction_fps=25.0,
-                                   temporal_head='linear')
+                                   extraction_fps=25.0)
     features_dino, labels_dino = extract_features(loaders_dino[-1])  # test loader
     print(f"  DINOv3: {len(features_dino)} total frames")
     print(f"  Class distribution: {np.bincount(labels_dino.astype(int))}")

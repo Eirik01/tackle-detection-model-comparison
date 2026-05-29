@@ -3,8 +3,7 @@
 `get_dataloaders` is the only public entry point; everything else in this file
 exists to support it. Other helpers that previously lived here (FocalLoss,
 compute_masked_loss, compute_class_weights, StaticBGUndersampledDataset, etc.)
-served the retired k-fold / BiLSTM training pipeline and have moved to
-`legacy/utils_old.py`.
+served an earlier training pipeline and have since been removed.
 """
 
 import os
@@ -61,46 +60,36 @@ def set_seed(seed: int):
     torch.use_deterministic_algorithms(True, warn_only=True)
 
 
-def collate_with_windowing(batch, backbone_type='dinov3', temporal_head='lstm', window_size=16, num_classes=3):
-    """
-    Custom collate function with optional sliding window extraction for DINOv3 + BiLSTM.
+def collate_batch(batch):
+    """Stack a list of per-clip samples into batched tensors.
 
-    Applies sliding windows ONLY when:
-      - backbone_type == 'dinov3'
-      - temporal_head == 'lstm'
-
-    Sliding windows with lower-middle center: for frame i, extracts [i - W//2 + 1 : i + W//2 + 1].
-    For 16-frame window: [i-7 : i+9] with center at index 7 (lower middle of 0-15).
-    Edges are zero-padded temporally. Returns per-frame windows and per-frame labels.
-    The model will extract the center hidden state from the BiLSTM (at index W//2 - 1).
+    Each sample is {'features', 'labels', 'mask', ...} where clips are already
+    padded to a common length by the dataset, so a plain stack suffices. The
+    feature trailing dims are preserved, so this works for both per-frame CLS
+    features ([max_len, D]) and dense token grids ([max_len, num_tokens, D]).
 
     Args:
         batch (list): List of samples from dataset, each with:
-                     {'features': [max_len, feature_dim],
+                     {'features': [max_len, ...feature_dim],
                       'labels': [max_len],
                       'mask': [max_len]}
-        backbone_type (str): Backbone identifier ('dinov3' or 'vjepa2')
-        temporal_head (str): Temporal head type ('lstm' or 'linear')
-        window_size (int): Size of sliding window (default: 16, to match V-JEPA2)
-        num_classes (int): Number of output classes
 
     Returns:
         dict: Batched tensors:
-              - 'features': [batch, seq_len, window_size, feature_dim]  (if sliding window applied)
-              - 'labels': [batch, seq_len]                              (per-frame, label of center frame)
-              - 'mask': [batch, seq_len]                                (per-frame, mask of center frame)
+              - 'features': [batch, max_len, ...feature_dim]
+              - 'labels': [batch, max_len]
+              - 'mask': [batch, max_len]
+              - 'gt_event_centers', 'video_id': per-sample metadata lists
     """
-    features_list = []
-    labels_list = []
-    mask_list = []
-
     def _to_tensor(value, dtype=None):
         if torch.is_tensor(value):
             return value.to(dtype=dtype) if dtype is not None else value
         tensor = torch.as_tensor(value)
         return tensor.to(dtype=dtype) if dtype is not None else tensor
 
-    # Stack batch
+    features_list = []
+    labels_list = []
+    mask_list = []
     gt_event_centers_batch = []
     video_id_batch = []
 
@@ -111,81 +100,13 @@ def collate_with_windowing(batch, backbone_type='dinov3', temporal_head='lstm', 
         gt_event_centers_batch.append(sample.get('gt_event_centers', []))
         video_id_batch.append(sample.get('video_id', ''))
 
-    # Batch: [batch_size, max_len, ...] (per-frame trailing dims preserved)
-    batch_features = torch.stack(features_list)  # [B, max_len, D]  or  [B, max_len, num_tokens, D]
-    batch_labels = torch.stack(labels_list)      # [B, max_len]
-    batch_mask = torch.stack(mask_list)          # [B, max_len]
-
-    # Apply sliding windows for:
-    #   - DINOv3 + BiLSTM (original use-case)
-    #   - any backbone + attpool / vjepa2_attpool over cls features
-    # Skip when features are already dense per-clip token grids (4D: each frame
-    # already carries its own [T*H*W, D] context).
-    is_dense = batch_features.dim() == 4
-    need_windows = (
-        not is_dense
-        and ((backbone_type == 'dinov3' and temporal_head == 'lstm')
-             or temporal_head in ('attpool', 'vjepa2_attpool'))
-    )
-    if need_windows:
-        batch_features, batch_labels, batch_mask = _apply_sliding_window(
-            batch_features, batch_labels, batch_mask,
-            window_size=window_size
-        )
-
     return {
-        'features': batch_features,
-        'labels': batch_labels,
-        'mask': batch_mask,
+        'features': torch.stack(features_list),
+        'labels': torch.stack(labels_list),
+        'mask': torch.stack(mask_list),
         'gt_event_centers': gt_event_centers_batch,
         'video_id': video_id_batch,
     }
-
-
-def _apply_sliding_window(features, labels, mask, window_size=16):
-    """
-    Apply sliding window extraction with lower-middle center: for each frame i, extract [i - W//2 + 1 : i + W//2 + 1].
-
-    For 16-frame window: [i-7 : i+9] with center at index 7 (lower middle of 0-15 indices).
-    This creates per-frame context windows with zero-padding at sequence boundaries.
-    Output shape allows model to process each frame with its temporal context,
-    and extract the center hidden state at index W//2 - 1.
-
-    Args:
-        features: [batch, seq_len, feature_dim]
-        labels: [batch, seq_len]
-        mask: [batch, seq_len]
-        window_size: Size of sliding window (default: 16 frames, to match V-JEPA2 temporal granularity)
-
-    Returns:
-        Tuple of (windowed_features, labels, mask)
-        - windowed_features: [batch, seq_len, window_size, feature_dim]  (each frame gets a window)
-        - labels: [batch, seq_len]                                        (per-frame labels, center frame)
-        - mask: [batch, seq_len]                                          (per-frame mask, center frame)
-    """
-    batch_size, seq_len, feature_dim = features.shape
-    half_window = window_size // 2  # For window_size=16: half_window=8
-
-    # Pad features with zeros at the start for boundary handling
-    # Padding on left: half_window - 1, on right: half_window
-    padded_features = torch.nn.functional.pad(
-        features,
-        (0, 0, half_window - 1, half_window),  # (left, right) on seq_len dimension
-        mode='constant',
-        value=0.0
-    )  # Shape: [batch, padded_len, feature_dim]
-
-    # Vectorized extraction: efficiently create sliding windows using gather or stacking
-    # Build indices for all window positions at once, then use gather
-    # For each output position i, we extract padded_features[:, i:i+window_size, :]
-    windowed_features_list = [
-        padded_features[:, i:i+window_size, :].unsqueeze(1)
-        for i in range(seq_len)
-    ]
-    windowed_features = torch.cat(windowed_features_list, dim=1)  # [batch, seq_len, window_size, feature_dim]
-
-    # Labels and mask stay per-frame (center frame of each window)
-    return windowed_features, labels, mask
 
 
 class MaskedSubset(torch.utils.data.Dataset):
@@ -378,10 +299,10 @@ def compute_target_count_masks(dataset, target_counts, seed: int,
 
 
 def get_dataloaders(batch_size=8, backbone_type=None, backbone_size=None, num_classes=None,
-                    labeling_mode='interval', tolerance_sec=0.0, temporal_head='lstm', extraction_fps=5.0,
+                    labeling_mode='interval', tolerance_sec=0.0, extraction_fps=5.0,
                     bg_undersample_mode='none', bg_subsample_ratio=0.0, bg_undersample_seed=42,
                     target_counts=None,
-                    window_size=16, fold_idx=None, n_folds=5,
+                    fold_idx=None, n_folds=5,
                     val_frac=None,
                     feature_type='cls',
                     apply_balancing_to_eval=False):
@@ -395,8 +316,6 @@ def get_dataloaders(batch_size=8, backbone_type=None, backbone_size=None, num_cl
         num_classes (int): Number of classes (3 or 5). Uses config default if None.
         labeling_mode (str): Labeling strategy - 'anchor' (center ± tolerance) or 'interval' (full range + padding). Default: 'interval'.
         tolerance_sec (float): Temporal tolerance in seconds. Default: 0.0.
-        temporal_head (str): Temporal head type ('lstm' or 'linear'). Controls whether 16-frame windowing is applied.
-                            Windowing is applied ONLY when backbone_type='dinov3' AND temporal_head='lstm'. Default: 'lstm'.
         extraction_fps (float): FPS used during feature extraction (default: 5.0). Must match the fps suffix in feature filenames.
     """
     # Use config defaults if not specified
@@ -553,18 +472,9 @@ def get_dataloaders(batch_size=8, backbone_type=None, backbone_size=None, num_cl
     print()
     # ===== END GAME-DISJOINT SPLIT =====
 
-    # Create custom collate function with sliding window parameters
-    collate_fn = lambda batch: collate_with_windowing(
-        batch,
-        backbone_type=backbone_type,
-        temporal_head=temporal_head,
-        window_size=window_size,
-        num_classes=num_classes
-    )
-
     # Create Loaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_batch)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_batch)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_batch)
 
     return train_loader, val_loader, test_loader

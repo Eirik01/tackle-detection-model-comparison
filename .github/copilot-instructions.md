@@ -17,7 +17,7 @@ Master's thesis investigating how spatial and spatio-temporal foundation models 
    - Analyze trade-off between detection performance and computational efficiency for feasibility in live broadcast pipelines.
 
 2. **Objective 2: The Role of Post-Hoc Temporal Aggregation**
-   - Assess the role of post-hoc sequential memory by comparing tackle detection performance using a linear classifier versus a recurrent temporal aggregator (BiLSTM).
+   - Assess the role of post-hoc temporal aggregation by comparing tackle detection performance using a linear probe versus an attentive probe.
    - Compare performance on both spatial and spatio-temporal foundation model backbones.
 
 3. **Objective 3: Robustness to Broadcast Distortion**
@@ -50,15 +50,10 @@ Master's thesis investigating how spatial and spatio-temporal foundation models 
 - **Feature Extraction:**
   - DINOv3: Per-frame (no temporal context in features)
   - V-JEPA2: Sliding 16-frame windows (stride 3, has temporal context)
-- **Temporal Head (2×2 Ablation):** Controlled by `--temporal-head` flag in `train.py`.
-  - `lstm`: BatchNorm → BiLSTM → Linear (learns temporal context)
-  - `linear`: BatchNorm → Linear (per-frame probe, no inter-frame communication)
-  - **4 Configurations:**
-    - DINOv3 + Linear: Spatial-only baseline (no temporal modeling at all)
-    - DINOv3 + BiLSTM: Spatial + learned temporal
-    - V-JEPA2 + Linear: Native temporal baseline (encoder already has temporal context)
-    - V-JEPA2 + BiLSTM: Native temporal + learned long-range temporal
-  - **Key Comparison:** V-JEPA2+Linear vs DINOv3+BiLSTM (headline pair for RQ3)
+- **Heads (the three thesis pipelines):**
+    - DINOv3 + linear probe: per-frame linear classifier on the CLS token. Spatial-only baseline, no temporal modeling. Evaluated with 5-fold game-disjoint CV.
+    - DINOv3 + attentive probe: temporal reasoning lives in the head. Single 70/15/15 split.
+    - V-JEPA2 + attentive probe: temporal reasoning lives in the backbone. Single 70/15/15 split.
   - **Class Weights:** Inverse frequency normalized to min=1.0. **Never** use raw inverse counts.
 - **Output:** Frame-level predictions (one class per frame)
 

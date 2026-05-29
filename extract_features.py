@@ -89,10 +89,9 @@ def main():
         type=str,
         choices=["cls", "dense"],
         default="cls",
-        help="V-JEPA2 only: 'cls' saves the mean-pooled per-clip vector "
-             "(used by attpool/lstm/linear heads). 'dense' saves the full "
-             "[T*H*W, D] spatio-temporal token grid per clip (used by the "
-             "paper-faithful vjepa2_attpool head)."
+        help="V-JEPA2 only: 'cls' saves the mean-pooled per-clip vector. "
+             "'dense' saves the full [T*H*W, D] spatio-temporal token grid "
+             "per clip (used by the paper-faithful vjepa2_attpool head)."
     )
     parser.add_argument(
         "--save-dense",

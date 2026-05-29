@@ -60,13 +60,6 @@ BACKBONE_TYPE = os.getenv("BACKBONE_TYPE", "dinov3")
 # Model size: 'base', 'large', 'huge', or 'giant'
 BACKBONE_SIZE = os.getenv("BACKBONE_SIZE", "large")
 
-# ============================================================================
-# TEMPORAL HEAD CONFIGURATION
-# ============================================================================
-# Temporal modeling head type for action spotting
-# Options: 'linear' (per-frame probe) or 'bilstm' (bidirectional LSTM)
-HEAD_TYPE = os.getenv("HEAD_TYPE", "bilstm")
-
 # Backbone-specific configurations
 BACKBONE_CONFIGS = {
     'dinov3': {
@@ -134,7 +127,6 @@ HF_TOKEN = os.getenv("DINOv3_key") if REQUIRES_HF_TOKEN else None
 SOCCERNETV2_PASSWORD = os.getenv("SoccerNetv2_password")
 
 # Default extraction parameters
-DEFAULT_FPS = 2.0
 DEFAULT_BATCH_SIZE = 32
 
 # ============================================================================
