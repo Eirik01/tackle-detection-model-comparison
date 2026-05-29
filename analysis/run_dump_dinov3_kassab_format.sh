@@ -36,13 +36,13 @@ mkdir -p slurm_logs/kassab
 # only the backbone differs — a clean A/B comparison.
 #
 # Usage:
-#   sbatch run_dump_dinov3_kassab_format.sh                      # center_crop, 25.0 fps
-#   sbatch run_dump_dinov3_kassab_format.sh 25.0                 # explicit fps
-#   sbatch run_dump_dinov3_kassab_format.sh 25.0 reflect         # reflect variant
+#   sbatch analysis/run_dump_dinov3_kassab_format.sh                      # center_crop, 25.0 fps
+#   sbatch analysis/run_dump_dinov3_kassab_format.sh 25.0                 # explicit fps
+#   sbatch analysis/run_dump_dinov3_kassab_format.sh 25.0 reflect         # reflect variant
 #
 # To produce BOTH variants, sbatch the script twice:
-#   sbatch run_dump_dinov3_kassab_format.sh 25.0 center_crop
-#   sbatch run_dump_dinov3_kassab_format.sh 25.0 reflect
+#   sbatch analysis/run_dump_dinov3_kassab_format.sh 25.0 center_crop
+#   sbatch analysis/run_dump_dinov3_kassab_format.sh 25.0 reflect
 #
 # Outputs (named by padding mode, no collision):
 #   dinov3_sorted_cls_tokens_features.pt           (center_crop, default)

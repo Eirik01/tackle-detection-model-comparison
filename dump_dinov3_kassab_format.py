@@ -14,7 +14,7 @@ backbone changes. That makes the comparison an A/B test, not a protocol-equivale
 approximation.
 
 Usage (on Fox):
-    sbatch run_dump_dinov3_kassab_format.sh
+    sbatch analysis/run_dump_dinov3_kassab_format.sh
 
 Outputs:
     {output_dir}/dinov3_sorted_cls_tokens_features.pt    (float32 [N, 1024] tensor)

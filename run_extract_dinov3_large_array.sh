@@ -41,6 +41,17 @@ if [ "$PADDING_MODE" = "reflect" ]; then
     PAD_ARG="--padding-mode reflect"
 fi
 
+# Optional efficiency profiling (set PROFILE=1 to log GPU compute time /
+# throughput / peak VRAM to extraction_throughput.csv). Off by default: the
+# bulk run just caches features. NOTE: profile from a SINGLE, non-array task on
+# a pinned GPU (e.g. --gpus=rtx30:1) — concurrent array tasks all append to the
+# same CSV and would interleave rows.
+PROFILE=${PROFILE:-0}
+PROFILE_ARG=""
+if [ "$PROFILE" = "1" ]; then
+    PROFILE_ARG="--profile-efficiency"
+fi
+
 # --- Run feature extraction ---
 echo "=========================================="
 echo "Running DINOv3 Large Feature Extraction"
@@ -54,6 +65,9 @@ echo "Extract FPS: $EXTRACT_FPS"
 echo "Padding mode: $PADDING_MODE"
 if [ "$OVERRIDE" = "1" ]; then
     echo "Override: enabled (existing features will be overwritten)"
+fi
+if [ "$PROFILE" = "1" ]; then
+    echo "Profiling: enabled (-> extraction_throughput.csv)"
 fi
 echo "========================================="
 
@@ -70,6 +84,7 @@ uv run python extract_features.py \
     --start-idx $START_IDX \
     --end-idx $END_IDX \
     ${PAD_ARG} \
+    ${PROFILE_ARG} \
     ${OVERRIDE_ARG}
 
 echo "Feature extraction completed for videos [$START_IDX:$END_IDX]!"

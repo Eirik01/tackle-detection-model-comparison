@@ -81,6 +81,17 @@ if [ -n "$INTRA_WINDOW_STRIDE" ]; then
     INTRA_ARG="--intra-window-stride $INTRA_WINDOW_STRIDE"
 fi
 
+# Optional efficiency profiling (set PROFILE=1 to log GPU compute time /
+# throughput / peak VRAM to extraction_throughput.csv). Off by default: the
+# bulk run just caches features. NOTE: profile from a SINGLE, non-array task on
+# a pinned GPU (e.g. --gpus=rtx30:1) — concurrent array tasks all append to the
+# same CSV and would interleave rows.
+PROFILE=${PROFILE:-0}
+PROFILE_ARG=""
+if [ "$PROFILE" = "1" ]; then
+    PROFILE_ARG="--profile-efficiency"
+fi
+
 echo "=========================================="
 echo "V-JEPA2-Large dense extraction (W=${WINDOW_SIZE}, fps=${EXTRACT_FPS})"
 echo "=========================================="
@@ -101,6 +112,9 @@ echo "Feature type:    dense (fp16 spatio-temporal token grid)"
 if [ "$OVERRIDE" = "1" ]; then
     echo "Override:        enabled"
 fi
+if [ "$PROFILE" = "1" ]; then
+    echo "Profiling:       enabled (-> extraction_throughput.csv)"
+fi
 echo "=========================================="
 
 uv run python extract_features.py \
@@ -117,6 +131,7 @@ uv run python extract_features.py \
     ${STRIDE_ARG} \
     ${INTRA_ARG} \
     ${PAD_ARG} \
+    ${PROFILE_ARG} \
     ${OVERRIDE_ARG}
 
 echo "Done. Output dir:"
