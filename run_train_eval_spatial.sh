@@ -2,7 +2,7 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=train_eval_spatial
 #SBATCH --partition=accel
-#SBATCH --gpus=1
+#SBATCH --gpus=rtx30:1
 #SBATCH --mem=8G
 #SBATCH --time=00:20:00
 #SBATCH --output=slurm_logs/train_eval/spatial/%j.out
@@ -69,9 +69,13 @@ uv run python src/train_spatial.py \
 echo ""
 echo "[stage 2/2] Evaluation"
 echo "------------------------------------------"
+# Eval always runs the head-only efficiency profile (--profile-efficiency):
+# params / latency / peak VRAM -> results/head_efficiency.csv. GPU is pinned to
+# rtx30 above so the numbers are comparable across pipelines.
 uv run python src/eval_spatial.py \
     --run-dir "${RUN_DIR}" \
-    --metric  "${METRIC}"
+    --metric  "${METRIC}" \
+    --profile-efficiency
 
 echo ""
 echo "=========================================="

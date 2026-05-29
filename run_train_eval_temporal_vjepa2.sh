@@ -11,7 +11,7 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=train_eval_temporal_vjepa2
 #SBATCH --partition=accel
-#SBATCH --gpus=1
+#SBATCH --gpus=rtx30:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --time=02:00:00
@@ -141,7 +141,8 @@ uv run python -u src/eval_temporal.py \
     --num-workers ${NUM_WORKERS} \
     --padding-mode ${PADDING_MODE} \
     "${SPLIT_FLAGS[@]}" \
-    --save-json ${EVAL_OUT}
+    --save-json ${EVAL_OUT} \
+    --profile-efficiency
 
 echo
 echo "=========================================="

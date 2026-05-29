@@ -6,7 +6,7 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=train_eval_temporal_dinov3
 #SBATCH --partition=accel
-#SBATCH --gpus=1
+#SBATCH --gpus=rtx30:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=00:45:00
@@ -155,7 +155,8 @@ uv run python -u src/eval_temporal.py \
     --padding-mode ${PADDING_MODE} \
     --split-mode ${SPLIT_MODE} \
     "${SPLIT_FLAGS[@]}" \
-    --save-json ${EVAL_OUT}
+    --save-json ${EVAL_OUT} \
+    --profile-efficiency
 
 echo
 echo "=========================================="

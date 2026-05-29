@@ -128,10 +128,10 @@ sbatch sweep_spatial.sh
 sbatch sweep_temporal_dinov3.sh
 sbatch sweep_temporal_vjepa2.sh
 
-# ── Efficiency profiling (latency / throughput / peak memory) ──────
-sbatch run_profile_spatial.sh
-sbatch run_profile_temporal_dinov3.sh
-sbatch run_profile_temporal_vjepa2.sh
+# ── Head efficiency profiling (params / latency / peak VRAM) ───────
+# Always runs as part of the eval step above — every train/eval (and the
+# standalone eval) appends a row to results/head_efficiency.csv. The scripts
+# are pinned to rtx30 so the numbers are comparable across pipelines.
 ```
 
 Run scripts take positional overrides — e.g.
