@@ -22,8 +22,8 @@ brand-new clip without ground truth. It:
 
 No metric is computed (there is no tackle ground truth for SoccerNet).
 
-Usage (see soccernet_experiment/run_predict_spatial.sh):
-  uv run python src/predict_soccernet_spatial.py \
+Usage (see untrimmed_footage_experiment/run_predict_spatial.sh):
+  uv run python untrimmed_footage_experiment/predict_soccernet_spatial.py \
       --run-dir /cluster/.../results/dinov3_linear_spatial/<RUN_NAME> \
       --features-dir /cluster/.../soccernet_thesis_experiment/features \
       --min-confidence 0.5 \
@@ -35,12 +35,16 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 
-# Run as `python src/predict_soccernet_spatial.py`, so sys.path[0] == src/.
+# This experiment lives outside src/; put src/ on the path so the flat imports
+# below resolve (matches the shim used across analysis/ and visualization/).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
 from data.labels import CLASS_NAMES
 from eval_spatial import infer_clip, load_clip_cls
 from models.dinov3.linear_probe import DINOv3LinearProbe

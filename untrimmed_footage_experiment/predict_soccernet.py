@@ -18,8 +18,8 @@ No metric is computed (there is no tackle ground truth for SoccerNet). The peak
 list is exactly what the Average-mAP path would score, so a detection here is a
 detection there.
 
-Usage (see soccernet_experiment/run_predict.sh):
-  uv run python src/predict_soccernet.py \
+Usage (see untrimmed_footage_experiment/run_predict.sh):
+  uv run python untrimmed_footage_experiment/predict_soccernet.py \
       --features-dir /cluster/.../soccernet_thesis_experiment/features \
       --model-suffix centred_v1 \
       --min-confidence 0.5 \
@@ -36,13 +36,17 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 
-# Run as `python src/predict_soccernet.py`, so sys.path[0] == src/ and these
-# resolve the same way they do for eval_temporal.py.
+# This experiment lives outside src/; put src/ on the path so the flat imports
+# below resolve the same way they do for eval_temporal.py (matches the shim used
+# across analysis/ and visualization/).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
 from data.temporal_loaders import CLASS_NAMES, DINOv3DenseLoader
 from eval_temporal import find_checkpoint, rebuild_probe
 from postprocess import postprocess_clip

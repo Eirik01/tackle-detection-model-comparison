@@ -49,7 +49,7 @@ TACDEC_FEATURES_DINOV3 = TACDEC_FEATURES / "dinov3_large"
 TACDEC_FEATURES_VJEPA2 = TACDEC_FEATURES / "vjepa2_large"
 TACDEC_RESULTS = FOX_DATADIR_PATH / "TACDEC" / "results"
 
-# Work-area root for the soccernet_experiment/ qualitative run. The experiment
+# Work-area root for the untrimmed_footage_experiment/ qualitative run. The experiment
 # scripts own what they download / extract / predict; this is just where it
 # lands.
 SOCCERNET_EXPERIMENT_DIR = FOX_DATADIR_PATH / "soccernet_thesis_experiment"

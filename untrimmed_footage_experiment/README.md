@@ -28,13 +28,13 @@ and note its `<SUFFIX>` (passed as `MODEL_SUFFIX`, default `centred_v1`).
 
 ```bash
 # 1. Download + symlink the half  (LOGIN NODE — compute nodes have no internet)
-uv run python soccernet_experiment/download_half.py
+uv run python untrimmed_footage_experiment/download_half.py
 
 # 2. Extract DINOv3-L dense features  (GPU)
-sbatch soccernet_experiment/run_extract.sh
+sbatch untrimmed_footage_experiment/run_extract.sh
 
 # 3. Predict fired events  (GPU) — set MODEL_SUFFIX to your best run
-MODEL_SUFFIX=centred_v1 sbatch soccernet_experiment/run_predict.sh
+MODEL_SUFFIX=centred_v1 sbatch untrimmed_footage_experiment/run_predict.sh
 ```
 
 Everything lands under `EXP_DIR` (default
@@ -87,6 +87,6 @@ replay of a tackle.
   drift — check the "Original: … FPS" line in the extract log.
 - **Size/time.** A full 45-min half at 25 FPS dense is ~30–40 GB on disk and a
   few thousand probe forwards; extraction ~15–30 min, prediction a few minutes.
-- This experiment writes only under `soccernet_experiment/` and `EXP_DIR`; it
+- This experiment writes only under `untrimmed_footage_experiment/` and `EXP_DIR`; it
   does not touch TACDEC features, models, or results.
 ```

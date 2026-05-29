@@ -58,8 +58,7 @@ tackle-detection-model-comparison/
 │   ├── eval_temporal.py          # window/event-level eval, attentive probes
 │   ├── postprocess.py            # peak detection → fired events (feeds Average-mAP)
 │   ├── window_protocol.py        # shared windowing definition
-│   ├── soccernet_eval.py
-│   ├── predict_soccernet*.py     # inference on SoccerNet clips
+│   ├── soccernet_eval.py         # SoccerNet Average-mAP metric (used by eval_*)
 │   ├── select_hparams.py         # pick winners from a sweep
 │   ├── summarize_sweep.py
 │   ├── aggregate_kfold_spatial.py# combine the 5 spatial folds
@@ -78,7 +77,9 @@ tackle-detection-model-comparison/
 ├── analysis/                     # dataset & result analysis (class distribution,
 │                                 #   event durations, attention windows, clustering)
 ├── visualization/                # figure generation for the thesis
-├── soccernet_experiment/         # qualitative cross-dataset check (own README)
+├── untrimmed_footage_experiment/ # cross-dataset check: best probe on a full
+│                                 #   SoccerNet half (predict_soccernet*.py +
+│                                 #   runners + manual verification; own README)
 ├── tests/                        # parity / sanity scripts (split parity, crop pipeline)
 ├── results/                      # generated figures
 ├── pyproject.toml                # dependencies (Python 3.12, torch 2.8, transformers 4.57)
@@ -157,9 +158,9 @@ counts against Kassab's published numbers.
 
 ### SoccerNet qualitative check
 
-`soccernet_experiment/` runs the best pipeline (DINOv3 attentive probe) on one
+`untrimmed_footage_experiment/` runs the best pipeline (DINOv3 attentive probe) on one
 half of one SoccerNet game and dumps fired tackle events with timestamps for
-manual inspection. See [`soccernet_experiment/README.md`](soccernet_experiment/README.md).
+manual inspection. See [`untrimmed_footage_experiment/README.md`](untrimmed_footage_experiment/README.md).
 
 ## Notes
 

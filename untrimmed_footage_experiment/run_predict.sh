@@ -3,7 +3,7 @@
 # fired tackle events with timestamps for manual verification.
 #
 # Submit AFTER run_extract.sh:
-#   MODEL_SUFFIX=centred_v1 sbatch soccernet_experiment/run_predict.sh
+#   MODEL_SUFFIX=centred_v1 sbatch untrimmed_footage_experiment/run_predict.sh
 #
 # MODEL_SUFFIX selects the checkpoint best_attn_dinov3_l_<MODEL_SUFFIX>.pth from
 # TACDEC_MODELS/dinov3_l/ -- set it to YOUR best run's suffix.
@@ -53,7 +53,7 @@ echo "=========================================="
 
 # --video-id is omitted on purpose: predict_soccernet.py picks up the single
 # dense .npy in --features-dir and derives the id from its filename.
-uv run python -u src/predict_soccernet.py \
+uv run python -u untrimmed_footage_experiment/predict_soccernet.py \
     --features-dir "${FEATURES_DIR}" \
     --model-suffix "${MODEL_SUFFIX}" \
     --backbone-size large \

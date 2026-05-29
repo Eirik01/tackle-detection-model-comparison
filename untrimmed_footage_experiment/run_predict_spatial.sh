@@ -4,7 +4,7 @@
 #
 # Submit AFTER run_extract.sh (the CLS-feature extractor):
 #   RUN_DIR=/cluster/work/projects/ec12/ec-eirikto/TACDEC/results/dinov3_linear_spatial/<RUN_NAME> \
-#       sbatch soccernet_experiment/run_predict_spatial.sh
+#       sbatch untrimmed_footage_experiment/run_predict_spatial.sh
 #
 # RUN_DIR is the spatial training run directory and must contain
 # model.pt + config.json (the standard eval_spatial.py inputs).
@@ -39,7 +39,7 @@ echo "  min_conf : ${MIN_CONFIDENCE}   min_seg: ${MIN_SEGMENT_FRAMES}"
 echo "  out      : ${OUT_DIR}"
 echo "=========================================="
 
-uv run python -u src/predict_soccernet_spatial.py \
+uv run python -u untrimmed_footage_experiment/predict_soccernet_spatial.py \
     --run-dir "${RUN_DIR}" \
     --features-dir "${FEATURES_DIR}" \
     --min-confidence "${MIN_CONFIDENCE}" \

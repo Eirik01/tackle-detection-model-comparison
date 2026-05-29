@@ -1,7 +1,7 @@
 """Build the inputs for a ground-truth-driven precision/recall audit
 of the Obj4 broadcast experiment.
 
-Outputs two CSVs in soccernet_experiment/verification/:
+Outputs two CSVs in untrimmed_footage_experiment/verification/:
 
   firings.csv         every fired event from every pipeline in the chosen
                       window at the chosen threshold. Auto-generated, do
@@ -125,7 +125,7 @@ def main():
         print("  timestamp, class_name")
         print("    timestamp accepts seconds (642.4) or mm:ss[.ss] (10:42.40)")
         print("    class_name must be 'tackle-live' or 'tackle-replay'")
-        print("Then run: python3 soccernet_experiment/score_verification.py")
+        print("Then run: python3 untrimmed_footage_experiment/score_verification.py")
     else:
         print(f"  kept   {truth_path}  (already exists, not overwritten)")
 

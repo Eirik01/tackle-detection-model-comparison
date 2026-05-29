@@ -16,8 +16,8 @@ V-JEPA 2 counterpart to ``predict_soccernet.py`` (DINOv3 attentive). It:
 
 No metric is computed (there is no tackle ground truth for SoccerNet).
 
-Usage (see soccernet_experiment/run_predict_vjepa2.sh):
-  uv run python src/predict_soccernet_vjepa2.py \
+Usage (see untrimmed_footage_experiment/run_predict_vjepa2.sh):
+  uv run python untrimmed_footage_experiment/predict_soccernet_vjepa2.py \
       --features-dir /cluster/.../soccernet_thesis_experiment/features \
       --model-suffix v_attn_v1 \
       --window-size 10 \
@@ -32,10 +32,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
+
+# This experiment lives outside src/; put src/ on the path so the flat imports
+# below resolve (matches the shim used across analysis/ and visualization/).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from data.temporal_loaders import CLASS_NAMES, VJEPA2DenseLoader
 from eval_temporal import find_checkpoint, rebuild_probe

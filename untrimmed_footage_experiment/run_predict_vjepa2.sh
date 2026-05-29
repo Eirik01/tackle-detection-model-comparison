@@ -2,9 +2,9 @@
 # Run the best V-JEPA 2 attentive probe over the extracted SoccerNet half and
 # dump fired tackle events with timestamps for manual verification.
 #
-# Submit AFTER MODE=vjepa2 sbatch soccernet_experiment/run_extract.sh:
-#   sbatch soccernet_experiment/run_predict_vjepa2.sh
-#   MODEL_SUFFIX=other_run sbatch soccernet_experiment/run_predict_vjepa2.sh
+# Submit AFTER MODE=vjepa2 sbatch untrimmed_footage_experiment/run_extract.sh:
+#   sbatch untrimmed_footage_experiment/run_predict_vjepa2.sh
+#   MODEL_SUFFIX=other_run sbatch untrimmed_footage_experiment/run_predict_vjepa2.sh
 #
 # MODEL_SUFFIX selects the checkpoint best_attn_vjepa2_l_<MODEL_SUFFIX>.pth from
 # TACDEC_MODELS/vjepa2_l/. Defaults to centred_v1 (the live single-fold suffix
@@ -53,7 +53,7 @@ echo "  W / FPS  : ${WINDOW_SIZE} / ${FPS}"
 echo "  out      : ${OUT_DIR}"
 echo "=========================================="
 
-uv run python -u src/predict_soccernet_vjepa2.py \
+uv run python -u untrimmed_footage_experiment/predict_soccernet_vjepa2.py \
     --features-dir "${FEATURES_DIR}" \
     --model-suffix "${MODEL_SUFFIX}" \
     --backbone-size large \

@@ -7,7 +7,7 @@ SoccerNet's downloader places the file at
 and the extractor's rglob picks it up from there. No moving / renaming.
 
 Needs SoccerNetv2_password in tackle-detection-model-comparison/.env. Run on the login node:
-  uv run python soccernet_experiment/download_half.py
+  uv run python untrimmed_footage_experiment/download_half.py
 """
 
 from __future__ import annotations

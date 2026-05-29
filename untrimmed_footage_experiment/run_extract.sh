@@ -22,9 +22,9 @@
 # All three modes extract at 5 FPS directly (== probe target FPS).
 #
 # Submit AFTER the download step has populated $EXP_DIR:
-#   sbatch soccernet_experiment/run_extract.sh                  # MODE=dense
-#   MODE=cls sbatch soccernet_experiment/run_extract.sh         # MODE=cls
-#   MODE=vjepa2 sbatch soccernet_experiment/run_extract.sh      # MODE=vjepa2
+#   sbatch untrimmed_footage_experiment/run_extract.sh                  # MODE=dense
+#   MODE=cls sbatch untrimmed_footage_experiment/run_extract.sh         # MODE=cls
+#   MODE=vjepa2 sbatch untrimmed_footage_experiment/run_extract.sh      # MODE=vjepa2
 #
 # --- Slurm job parameters ---
 #SBATCH --account=ec12
@@ -108,6 +108,6 @@ uv run python -u extract_features.py \
 
 echo "Extraction done (MODE=${MODE}). Output in ${OUTPUT_DIR}/"
 case "${MODE}" in
-    dense)  echo "Next: MODEL_SUFFIX=<your_best> sbatch soccernet_experiment/run_predict.sh" ;;
-    vjepa2) echo "Next: MODEL_SUFFIX=<your_best> sbatch soccernet_experiment/run_predict_vjepa2.sh" ;;
+    dense)  echo "Next: MODEL_SUFFIX=<your_best> sbatch untrimmed_footage_experiment/run_predict.sh" ;;
+    vjepa2) echo "Next: MODEL_SUFFIX=<your_best> sbatch untrimmed_footage_experiment/run_predict_vjepa2.sh" ;;
 esac
