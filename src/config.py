@@ -23,14 +23,19 @@ PROCESSED_DATA_DIR.mkdir(exist_ok=True)
 # REMOTE paths (if applicable) USED FOR PROCESSING AND STORING LARGE DATASETS on FOX HPC and ONEDRIVE
 ONEDRIVE_FOLDER_NAME = "OneDrive - Universitetet i Oslo"
 
-# FOX Project work Area for temporary storage
-FOX_DATADIR_PATH = Path("/cluster/work/projects/ec12/ec-eirikto")
+# FOX Project work Area for temporary storage (large, regenerable data:
+# features, predictions, saved models, results). Override via the
+# FOX_DATADIR_PATH env var when running off-cluster; defaults to the UiO FOX
+# HPC work area.
+FOX_DATADIR_PATH = Path(os.getenv("FOX_DATADIR_PATH", "/cluster/work/projects/ec12/ec-eirikto"))
 FOX_SOCCERNET_DATADIR = FOX_DATADIR_PATH / "soccernet"
 FOX_PREDICTIONS_DATADIR = FOX_DATADIR_PATH / "predictions"
 FOX_MODELS_DATADIR = FOX_DATADIR_PATH / "saved_models"
 
-# FOX Project Area for permanent storage
-FOX_PROJECT_AREA_PATH = Path("/fp/projects01/ec12/ec-eirikto")
+# FOX Project Area for permanent storage (TACDEC videos + labels). Override
+# via the FOX_PROJECT_AREA_PATH env var when running off-cluster; defaults to
+# the UiO FOX HPC project area.
+FOX_PROJECT_AREA_PATH = Path(os.getenv("FOX_PROJECT_AREA_PATH", "/fp/projects01/ec12/ec-eirikto"))
 TACDEC_VIDEOS = FOX_PROJECT_AREA_PATH / "TACDEC" / "videos"
 TACDEC_LABELS = FOX_PROJECT_AREA_PATH / "TACDEC" / "labels"
 TACDEC_MODELS = FOX_DATADIR_PATH / "TACDEC" / "models"
