@@ -1,21 +1,20 @@
 """
-Kassab-style window-list dataset for the patch-token attentive probe protocol.
+Feature loaders + window dataset for the attentive-probe pipelines.
 
-This is the attentive-probe pipeline (Kassab-style concat stream + center-frame
-label), tailored to the attentive probe comparison:
+Everything the DINOv3 / V-JEPA 2 attentive probes need to turn cached dense
+features into per-window training items:
 
-  - Each item is ONE training window: (video_id, anchor_row, label).
-  - Features are loaded lazily per item: per-frame patch tokens for DINOv3
-    (gather W consecutive feature rows -> [W*256, 1024]) or per-window dense
-    tokens for V-JEPA2 (one cached entry -> [N_tokens, 1024]).
-  - Window centers come from Kassab's subsampling rules (cell-7 of TempTAC.ipynb)
-    expressed in target-FPS feature-row space, scaled from the 25 FPS originals:
-        bg_chunk     :  25 source frames -> round(25 * target_fps / 25) rows
-        bg_min_seg   :  70 source frames -> round(70 * target_fps / 25) rows
-        replay_cap   :  280 (unchanged)
-        live         :  uncapped
-  - Game-disjoint 70/15/15 split via legacy np.random (matches TempTAC.ipynb
-    cell-9 split_data_by_game).
+  - ``_load_video_labels_at_target_fps`` : read a clip's JSON labels onto the
+    target-FPS feature-row grid (5 -> 3 class merge).
+  - ``DINOv3DenseLoader`` / ``VJEPA2DenseLoader`` : lazy per-video feature
+    loaders with a small LRU. Given a clip + anchor row they return one window
+    of tokens -- per-frame patch tokens for DINOv3 (gather W consecutive rows
+    -> [W*256, 1024]) or one cached dense entry for V-JEPA 2 ([N_tokens, 1024]).
+  - ``AttentiveWindowDataset`` + ``attentive_collate`` : wrap a window list
+    (built by ``temporal_protocol`` / ``balanced_temporal_dataset``) and a
+    loader into a PyTorch dataset / dataloader.
+  - ``compute_class_weights`` : inverse-frequency class weights over a train
+    window list.
 
 Feature file conventions:
     DINOv3 dense  : ``{video_id}_dinov3_l_{fps}fps_dense_features.npy``  (fp16)
@@ -36,7 +35,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 from data.labels import (
     BACKGROUND as CLASS_BACKGROUND,
@@ -44,6 +43,18 @@ from data.labels import (
     TACKLE_LIVE as CLASS_TACKLE_LIVE,
     TACKLE_REPLAY as CLASS_TACKLE_REPLAY,
 )
+
+# Public surface of this module. CLASS_NAMES is re-exported from data.labels as
+# a convenience so callers get the loaders and the class-name map in one import.
+__all__ = [
+    "CLASS_NAMES",
+    "DINOv3DenseLoader",
+    "VJEPA2DenseLoader",
+    "AttentiveWindowDataset",
+    "attentive_collate",
+    "compute_class_weights",
+    "_load_video_labels_at_target_fps",
+]
 
 
 # ---- Label loading at target FPS --------------------------------------------
@@ -94,224 +105,6 @@ def _load_video_labels_at_target_fps(label_path: Path, target_fps: float):
 
     game_id = int(data.get("metadata", {}).get("game_id", -1))
     return target_labels, game_id, n_target, stride
-
-
-# ---- Sequence extraction (target-FPS feature-row space) ---------------------
-
-
-def extract_sequences_per_video(labels_dir: Path, target_fps: float):
-    """
-    Walk every label JSON in alphabetical order (matches the extractor's
-    ``sorted(glob)`` traversal), emit one record per maximal contiguous run.
-    All frame indices are in target-FPS feature-row space.
-    """
-    sequences = []
-    for label_path in sorted(Path(labels_dir).glob("*.json")):
-        labels, game_id, n_target, stride = _load_video_labels_at_target_fps(
-            label_path, target_fps
-        )
-        if game_id == -1 or n_target == 0:
-            continue
-        run_start = 0
-        for i in range(1, n_target + 1):
-            if i == n_target or labels[i] != labels[run_start]:
-                sequences.append({
-                    "video_id":    label_path.stem,
-                    "game_id":     game_id,
-                    "class":       int(labels[run_start]),
-                    "start_frame": run_start,        # in target_fps rows
-                    "end_frame":   i,                # exclusive
-                    "n_frames":    i - run_start,
-                    "stride":      stride,
-                    "n_target":    n_target,
-                })
-                run_start = i
-    return sequences
-
-
-# ---- Kassab subsampling rules in target-FPS space ---------------------------
-
-
-def _scale_from_25fps(n: int, target_fps: float) -> int:
-    """Scale a frame count specified at 25 FPS to target_fps. >= 1."""
-    return max(1, int(round(n * target_fps / 25.0)))
-
-
-def sample_background_chunks(sequences, target_fps,
-                             target_count=500, chunk_frames=None,
-                             min_segment_frames=None, seed=42):
-    """
-    Walk bg segments in data order, take the first ``target_count`` whose
-    length is >= ``min_segment_frames``, pick a random start that places the
-    chunk past a leading buffer scaled from Kassab's 35 source-frame buffer.
-
-    Defaults match the 25 FPS Kassab protocol scaled to target_fps:
-        chunk_frames       = round(25 * target_fps / 25) = round(target_fps)
-        min_segment_frames = round(70 * target_fps / 25)
-        leading_buffer     = round(35 * target_fps / 25)
-    """
-    if chunk_frames is None:
-        chunk_frames = _scale_from_25fps(25, target_fps)
-    if min_segment_frames is None:
-        min_segment_frames = max(2 * chunk_frames + 2,
-                                 _scale_from_25fps(70, target_fps))
-    leading = _scale_from_25fps(35, target_fps)
-
-    rng = np.random.default_rng(seed)
-    chunks = []
-    for s in sequences:
-        if s["class"] != CLASS_BACKGROUND:
-            continue
-        if s["n_frames"] < min_segment_frames:
-            continue
-        if len(chunks) >= target_count:
-            break
-        # Mirror cell-7's randint(35, n - 34) => start in [leading, n - chunk_frames).
-        max_start = s["n_frames"] - chunk_frames
-        if max_start <= leading:
-            start_in_seg = leading if leading < s["n_frames"] - chunk_frames else 0
-        else:
-            start_in_seg = int(rng.integers(leading, max_start))
-        global_start = s["start_frame"] + start_in_seg
-        chunks.append({
-            "video_id":    s["video_id"],
-            "game_id":     s["game_id"],
-            "class":       CLASS_BACKGROUND,
-            "start_frame": global_start,
-            "end_frame":   global_start + chunk_frames,
-            "n_frames":    chunk_frames,
-            "stride":      s["stride"],
-            "n_target":    s["n_target"],
-        })
-    if len(chunks) < target_count:
-        raise RuntimeError(
-            f"Only {len(chunks)} bg segments with n_frames >= {min_segment_frames} "
-            f"found at target_fps={target_fps}; need {target_count}."
-        )
-    return chunks
-
-
-def build_kassab_attentive_sequences(labels_dir, target_fps,
-                                      bg_count=500, replay_cap=280,
-                                      bg_chunk_frames=None,
-                                      bg_min_segment_frames=None,
-                                      seed=42):
-    """
-    Produce the Kassab subsampled sequence list at target_fps. Tackle-live is
-    uncapped, tackle-replay capped at ``replay_cap``, background subsampled to
-    ``bg_count`` chunks via the Kassab rules.
-    """
-    raw = extract_sequences_per_video(labels_dir, target_fps)
-
-    out = []
-    replay_kept = 0
-    for s in raw:
-        if s["class"] == CLASS_TACKLE_LIVE:
-            out.append(s)
-        elif s["class"] == CLASS_TACKLE_REPLAY:
-            if replay_kept < replay_cap:
-                out.append(s)
-                replay_kept += 1
-
-    out.extend(sample_background_chunks(
-        raw,
-        target_fps=target_fps,
-        target_count=bg_count,
-        chunk_frames=bg_chunk_frames,
-        min_segment_frames=bg_min_segment_frames,
-        seed=seed,
-    ))
-    return out
-
-
-def split_by_game(sequences, train=0.70, val=0.15, seed=42):
-    """
-    Game-disjoint split with the legacy np.random RNG (matches cell-9
-    split_data_by_game of TempTAC.ipynb byte-for-byte).
-    """
-    games = sorted({s["game_id"] for s in sequences})
-    np.random.seed(seed)
-    np.random.shuffle(games)
-    n = len(games)
-    n_train = int(n * train)
-    n_val = int(n * val)
-    train_games = set(games[:n_train])
-    val_games = set(games[n_train:n_train + n_val])
-    test_games = set(games[n_train + n_val:])
-
-    splits = {
-        "train": [s for s in sequences if s["game_id"] in train_games],
-        "val":   [s for s in sequences if s["game_id"] in val_games],
-        "test":  [s for s in sequences if s["game_id"] in test_games],
-    }
-    game_ids = {
-        "train": sorted(train_games),
-        "val":   sorted(val_games),
-        "test":  sorted(test_games),
-    }
-    return splits, game_ids
-
-
-# ---- Window list ------------------------------------------------------------
-
-
-def build_window_list(sequences, window_size: int, anchor_stride=None,
-                      intra_window_stride=None):
-    """
-    Convert sequence records into one window per record: anchor row = sequence
-    midpoint. Windows are defined by (video_id, anchor_row, class). The
-    feature loader resolves anchor_row to a [W, ...] feature slice at fetch
-    time.
-
-    Boundary policy: Kassab no-pad. Each sequence's anchor is clamped into
-    the per-video ``valid_anchor_range``; sequences from videos too short to
-    contain even one valid window are dropped (with a warning).
-
-    Args:
-        sequences: list of sequence records (must contain stride and n_target).
-        window_size: target-FPS frames per window.
-        anchor_stride: source-frame stride between adjacent target-FPS rows.
-            If None, inferred from each sequence's `stride` field.
-        intra_window_stride: source-frame stride between adjacent frames inside
-            one window. If None, defaults to `anchor_stride` (matches the
-            shared 5 FPS protocol).
-    """
-    from window_protocol import valid_anchor_range
-
-    windows = []
-    skipped_short = 0
-    for s in sequences:
-        center = (s["start_frame"] + s["end_frame"] - 1) // 2
-
-        a_stride = anchor_stride if anchor_stride is not None else s["stride"]
-        iw_stride = intra_window_stride if intra_window_stride is not None else a_stride
-
-        # n_target is in target-FPS rows; valid_anchor_range expects video
-        # length in source frames. Convert.
-        n_source = s["n_target"] * a_stride
-        valid_lo, valid_hi = valid_anchor_range(
-            video_length=n_source,
-            anchor_stride=a_stride,
-            intra_window_stride=iw_stride,
-            window_length=window_size,
-        )
-        if valid_hi < valid_lo:
-            skipped_short += 1
-            continue
-
-        anchor = max(valid_lo, min(valid_hi, center))
-        windows.append({
-            "video_id":  s["video_id"],
-            "game_id":   s["game_id"],
-            "class":     s["class"],
-            "anchor":    int(anchor),
-            "n_target":  s["n_target"],
-            "stride":    s["stride"],
-        })
-    if skipped_short:
-        print(f"  build_window_list: skipped {skipped_short} sequences "
-              f"from videos too short for W={window_size} at this stride.")
-    return windows
 
 
 # ---- Feature loaders --------------------------------------------------------
@@ -390,8 +183,8 @@ class DINOv3DenseLoader(_FeatureLoader):
 
     def _window_tokens(self, arr, anchor: int) -> np.ndarray:
         # Use the shared protocol with 'clamp' as a safety net. In the no-pad
-        # protocol, callers (build_window_list / eval mAP) only request anchors
-        # in the valid range, so the clamp never actually triggers -- but if a
+        # protocol, callers only request anchors in the valid range, so the
+        # clamp never actually triggers -- but if a
         # bug ever produces a boundary anchor, edge-replication is safer than
         # an out-of-range index error.
         from window_protocol import select_source_frames
@@ -527,7 +320,7 @@ class VJEPA2DenseLoader(_FeatureLoader):
 # ---- PyTorch Dataset --------------------------------------------------------
 
 
-class KassabAttentiveDataset(Dataset):
+class AttentiveWindowDataset(Dataset):
     """
     PyTorch Dataset wrapping a window list + a feature loader.
 
@@ -563,112 +356,6 @@ def attentive_collate(batch):
         "video_ids": [b["video_id"] for b in batch],
         "anchors":   torch.tensor([b["anchor"] for b in batch], dtype=torch.long),
     }
-
-
-# ---- One-call entrypoint ----------------------------------------------------
-
-
-def get_kassab_attentive_dataloaders(
-    labels_dir,
-    features_dir,
-    backbone: str,        # 'dinov3' or 'vjepa2'
-    window_size: int,
-    target_fps: float = 4.0,
-    bg_count: int = 500,
-    replay_cap: int = 280,
-    train_frac: float = 0.70,
-    val_frac: float = 0.15,
-    seed: int = 42,
-    batch_size: int = 64,
-    num_workers: int = 0,
-    feature_loader_cache: int = 4,
-    source_fps: float | None = None,
-    dense_tag: str = "",
-):
-    """
-    Build train/val/test dataloaders for the Kassab patch-token attentive probe
-    pipeline. Returns ``(train_loader, val_loader, test_loader, info)``.
-
-    ``info`` carries:
-        - frame_counts_per_split : per-class window counts per split
-        - n_sequences            : per-split window-list length
-        - game_ids               : literal game-IDs per split (audit)
-        - target_fps, window_size, backbone, _splits (raw windows)
-    """
-    if backbone not in ("dinov3", "vjepa2"):
-        raise ValueError(f"backbone must be 'dinov3' or 'vjepa2', got {backbone!r}")
-
-    sequences = build_kassab_attentive_sequences(
-        labels_dir=labels_dir,
-        target_fps=target_fps,
-        bg_count=bg_count,
-        replay_cap=replay_cap,
-        seed=seed,
-    )
-    splits, game_ids = split_by_game(sequences,
-                                     train=train_frac, val=val_frac, seed=seed)
-
-    # Build window lists per split.
-    split_windows = {
-        name: build_window_list(seqs, window_size=window_size)
-        for name, seqs in splits.items()
-    }
-
-    # One loader instance per split (independent caches; per-worker friendly).
-    # source_fps lets DINOv3 read a 25 FPS file at a lower effective target_fps
-    # via stride-indexing -- no re-extraction needed. Defaults to target_fps
-    # when not provided, preserving the legacy "extract per FPS" behavior.
-    eff_source_fps = source_fps if source_fps is not None else target_fps
-
-    def _make_loader():
-        if backbone == "dinov3":
-            return DINOv3DenseLoader(features_dir, target_fps, window_size,
-                                      source_fps=eff_source_fps,
-                                      max_cached=feature_loader_cache,
-                                      dense_tag=dense_tag)
-        # V-JEPA2 features are produced per-window by a separate forward at
-        # extraction time, so the on-disk file IS at target_fps -- source_fps
-        # has no meaning here and is ignored.
-        return VJEPA2DenseLoader(features_dir, target_fps, window_size,
-                                  max_cached=feature_loader_cache,
-                                  dense_tag=dense_tag)
-
-    train_ds = KassabAttentiveDataset(split_windows["train"], _make_loader())
-    val_ds   = KassabAttentiveDataset(split_windows["val"],   _make_loader())
-    test_ds  = KassabAttentiveDataset(split_windows["test"],  _make_loader())
-
-    # persistent_workers=True keeps each worker's feature LRU warm across
-    # epochs (massive win for small datasets where the LRU + workers can hold
-    # most of the videos in RAM after epoch 1). PyTorch refuses the flag with
-    # num_workers=0, so gate on that.
-    dl_kwargs = dict(collate_fn=attentive_collate, num_workers=num_workers)
-    if num_workers > 0:
-        dl_kwargs["persistent_workers"] = True
-
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  **dl_kwargs)
-    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, **dl_kwargs)
-    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, **dl_kwargs)
-
-    # Per-split per-class counts (for class weights and audit).
-    frame_counts_per_split = {}
-    for name, wins in split_windows.items():
-        per_class = {c: 0 for c in CLASS_NAMES}
-        for w in wins:
-            per_class[w["class"]] += 1
-        frame_counts_per_split[name] = per_class
-
-    info = {
-        "frame_counts_per_split": frame_counts_per_split,
-        "n_sequences": {k: len(v) for k, v in split_windows.items()},
-        "game_ids": game_ids,
-        "target_fps": target_fps,
-        "source_fps": eff_source_fps,
-        "window_size": window_size,
-        "backbone": backbone,
-        # Underscore-prefixed: not JSON-serializable
-        "_splits": split_windows,
-    }
-    return train_loader, val_loader, test_loader, info
 
 
 def compute_class_weights(window_list, num_classes=3, normalization="min1"):

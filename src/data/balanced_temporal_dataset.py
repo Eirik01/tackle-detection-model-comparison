@@ -29,7 +29,7 @@ from torch.utils.data import DataLoader
 
 from data.temporal_loaders import (
     DINOv3DenseLoader,
-    KassabAttentiveDataset,
+    AttentiveWindowDataset,
     VJEPA2DenseLoader,
     attentive_collate,
 )
@@ -71,7 +71,7 @@ def _windows_to_dicts(
     n_target_by_clip: Dict[str, int],
 ) -> List[dict]:
     """Convert ``build_balanced_windows`` tuples to the dict format expected by
-    ``KassabAttentiveDataset`` + ``DINOv3DenseLoader`` / ``VJEPA2DenseLoader``."""
+    ``AttentiveWindowDataset`` + ``DINOv3DenseLoader`` / ``VJEPA2DenseLoader``."""
     return [
         {
             "video_id": clip_id,
@@ -130,9 +130,9 @@ def _assemble_loaders(
             dense_tag=dense_tag,
         )
 
-    train_ds = KassabAttentiveDataset(split_windows["train"], _make_loader())
-    val_ds   = KassabAttentiveDataset(split_windows["val"],   _make_loader())
-    test_ds  = KassabAttentiveDataset(split_windows["test"],  _make_loader())
+    train_ds = AttentiveWindowDataset(split_windows["train"], _make_loader())
+    val_ds   = AttentiveWindowDataset(split_windows["val"],   _make_loader())
+    test_ds  = AttentiveWindowDataset(split_windows["test"],  _make_loader())
 
     # persistent_workers=True keeps each worker's feature LRU warm across
     # epochs. PyTorch refuses the flag with num_workers=0, so gate on that.
@@ -213,7 +213,7 @@ def get_balanced_temporal_dataloaders(
 
     One W=10 window per event, class-balanced background (see
     ``temporal_protocol.build_balanced_windows``). Each item produced by the
-    returned loaders matches the Kassab attentive loader's contract:
+    returned loaders matches the attentive window dataset's contract:
         features  : Tensor [N_tokens, D]
                       DINOv3 -> ``W * num_patches`` rows
                       V-JEPA 2 -> single dense window slice

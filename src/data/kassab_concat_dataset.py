@@ -279,7 +279,7 @@ def get_kassab_concat_temporal_dataloaders(
     }
 
     # Wrap split lists into the same per-window dict layout used by
-    # KassabAttentiveDataset book-keeping (lets compute_class_weights and
+    # AttentiveWindowDataset book-keeping (lets compute_class_weights and
     # the train_temporal.py "Train per-class counts" print reuse without
     # changes).
     info_splits = {
