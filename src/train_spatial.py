@@ -38,10 +38,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 import config
-from data.spatial_protocol import (
-    BACKGROUND,
-    TACKLE_LIVE,
-    TACKLE_REPLAY,
+from data.labels import CLASS_NAMES, CLASS_ORDER
+from data.splits import (
     balance_split,
     build_frame_labels,
     kfold_split_games,
@@ -49,10 +47,6 @@ from data.spatial_protocol import (
 )
 from models.dinov3.linear_probe import DINOv3LinearProbe
 from utils import set_seed
-
-
-CLASS_NAMES = {TACKLE_LIVE: "tackle-live", TACKLE_REPLAY: "tackle-replay", BACKGROUND: "background"}
-CLASS_ORDER = [TACKLE_LIVE, TACKLE_REPLAY, BACKGROUND]
 
 
 # ---------------------------------------------------------------------------

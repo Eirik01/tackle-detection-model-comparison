@@ -37,7 +37,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from data.kassab_attentive_dataset import CLASS_NAMES, VJEPA2DenseLoader
+from data.temporal_loaders import CLASS_NAMES, VJEPA2DenseLoader
 from eval_temporal import find_checkpoint, rebuild_probe
 from postprocess import postprocess_clip
 from utils import set_seed

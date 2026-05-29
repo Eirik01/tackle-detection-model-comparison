@@ -1,12 +1,12 @@
 """Class-balanced window construction for the DINOv3 / V-JEPA 2 temporal probes.
 
-Companion to ``spatial_protocol.py``. Operates at 5 FPS with W=10 frame windows
+Companion to ``splits.py``. Operates at 5 FPS with W=10 frame windows
 (2 s of temporal context), matching both attentive-probe configurations.
 
 Protocol (3 classes after the 5->3 merge in ``tacdec_dataset.py``):
 
 1. Game-disjoint train/val/test split is delegated to
-   ``spatial_protocol.split_games`` for parity between the spatial and temporal
+   ``splits.split_games`` for parity between the spatial and temporal
    evaluations.
 
 2. Frame timeline is subsampled 25 FPS -> 5 FPS by stride-5 indexing:
@@ -31,7 +31,7 @@ Protocol (3 classes after the 5->3 merge in ``tacdec_dataset.py``):
 
 Window labelling uses the center-frame label. Required because live events at
 5 FPS are typically shorter than W=10, so a majority-label rule would erase the
-live class. Same convention as ``KassabConcatDataset`` (kassab_dataset.py:297).
+live class.
 
 Eligibility for a background window center:
   * Distance from any real event >= EVENT_GAP_5FPS frames at 5 FPS.
@@ -47,10 +47,14 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from data.spatial_protocol import (
+from data.labels import (
     BACKGROUND,
+    LIVE_TYPES as _LIVE_TYPES,
+    REPLAY_TYPES as _REPLAY_TYPES,
     TACKLE_LIVE,
     TACKLE_REPLAY,
+)
+from data.splits import (
     build_frame_labels,
     split_games,           # re-export so callers have a single import surface
     split_games_from_file, # re-export for the --split-file override
@@ -80,7 +84,7 @@ __all__ = [
 ]
 
 W = 10                  # window length in 5-FPS frames (= 2.0 s)
-CENTER = W // 2 - 1     # 4. Lower-middle center, matches kassab_dataset.py:297.
+CENTER = W // 2 - 1     # 4. Lower-middle center (even W -> no exact middle).
 STRIDE_S = 5            # 25 FPS -> 5 FPS subsample stride
 MIN_BG_SEG_5FPS = 20    # min eligible background segment length at 5 FPS
 EVENT_GAP_5FPS = 5      # buffer between any event frame and a bg window center
@@ -92,8 +96,6 @@ KASSAB_BG_MIN_LEN_5FPS = 14   # 70 / 5
 KASSAB_BG_SLICE_LEN_5FPS = 5  # 25 / 5
 KASSAB_BG_SLICE_MARGIN_5FPS = 7  # ~35 / 5
 
-_LIVE_TYPES = {"tackle-live", "tackle-live-incomplete"}
-_REPLAY_TYPES = {"tackle-replay", "tackle-replay-incomplete"}
 
 
 def labels_at_5fps(labels_25fps: np.ndarray) -> np.ndarray:

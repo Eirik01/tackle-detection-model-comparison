@@ -41,11 +41,9 @@ from sklearn.metrics import classification_report, confusion_matrix, f1_score
 
 import config
 from data.balanced_temporal_dataset import get_balanced_temporal_dataloaders
-from data.kassab_attentive_dataset import CLASS_NAMES
+from data.labels import CLASS_NAMES, CLASS_ORDER
 from models.dinov3.linear_probe import DINOv3LinearProbe
 from utils import set_seed
-
-CLASS_ORDER = [0, 1, 2]  # tackle-live, tackle-replay, background
 
 
 def _feature_path(cache_dir: Path, clip_id: str, backbone_id: str, fps: float) -> Path:
@@ -113,7 +111,7 @@ def main() -> None:
     dense_tag = "reflect" if args.padding_mode == "reflect" else ""
 
     # Diagnostic: confirm we see the same splits the temporal training used.
-    from data.spatial_protocol import split_games  # noqa: WPS433
+    from data.splits import split_games  # noqa: WPS433
     _splits_check = split_games(args.labels_dir, val_frac=0.15,
                                 test_frac=0.15, seed=args.seed)
     print(f"       labels_dir = {args.labels_dir}")

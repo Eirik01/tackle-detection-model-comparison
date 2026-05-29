@@ -1,19 +1,19 @@
 """Balanced-windows attentive-probe dataset (5 FPS / W=10).
 
-Companion to ``kassab_attentive_dataset.py``. The Kassab dataset uses a
+Companion to ``temporal_loaders.py``. The Kassab dataset uses a
 concat-and-slide rule against a no-pad stream; this one instead uses
 ``temporal_protocol.build_balanced_windows`` as the upstream sampler:
 one window per event, class-balanced background, and a strict
 "center-frame label == event class" filter.
 
 Reuses the file loaders, PyTorch dataset wrapper, and collator from
-``kassab_attentive_dataset.py`` verbatim. The temporal_protocol's
+``temporal_loaders.py`` verbatim. The temporal_protocol's
 ``c`` (5-FPS center index) is exactly ``anchor_idx`` in
 ``window_protocol``: both V-JEPA 2 (``dense[c - valid_lo]``) and DINOv3
 (``select_source_frames(anchor_idx=c, ...)``) resolve to the same 10
 underlying 25-FPS source frames.
 
-Splits come from ``spatial_protocol.split_games`` (re-exported by
+Splits come from ``splits.split_games`` (re-exported by
 ``temporal_protocol``) so the train/val/test partition matches the
 spatial probe game-disjoint split.
 """
@@ -27,13 +27,13 @@ from typing import Dict, List, Tuple
 import torch
 from torch.utils.data import DataLoader
 
-from data.kassab_attentive_dataset import (
+from data.temporal_loaders import (
     DINOv3DenseLoader,
     KassabAttentiveDataset,
     VJEPA2DenseLoader,
     attentive_collate,
 )
-from data.kassab_dataset import CLASS_NAMES
+from data.labels import CLASS_NAMES
 from data.temporal_protocol import (
     STRIDE_S,
     W as PROTO_W,

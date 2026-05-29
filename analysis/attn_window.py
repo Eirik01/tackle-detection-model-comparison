@@ -54,7 +54,7 @@ from window_protocol import select_source_frames
 from config import ( 
     TACDEC_FEATURES, TACDEC_LABELS, TACDEC_MODELS, TACDEC_VIDEOS,
 )
-from data.kassab_attentive_dataset import (
+from data.temporal_loaders import (
     CLASS_NAMES, DINOv3DenseLoader, VJEPA2DenseLoader,
 )
 

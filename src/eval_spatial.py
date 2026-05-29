@@ -38,25 +38,23 @@ from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from tqdm import tqdm
 
 import config
-from data.spatial_protocol import (
+from data.labels import (
     BACKGROUND,
+    CLASS_NAMES,
+    CLASS_ORDER,
+    LIVE_TYPES as _LIVE_TYPES,
+    REPLAY_TYPES as _REPLAY_TYPES,
     TACKLE_LIVE,
     TACKLE_REPLAY,
-    balance_split,
-    build_frame_labels,
 )
+from data.splits import balance_split, build_frame_labels
 from head_efficiency import PROFILE_BATCH_SIZE, profile_head
 from models.dinov3.linear_probe import DINOv3LinearProbe
 from postprocess import postprocess_clip
 from soccernet_eval import evaluate_average_map
 
 
-CLASS_NAMES = {TACKLE_LIVE: "tackle-live", TACKLE_REPLAY: "tackle-replay", BACKGROUND: "background"}
-CLASS_ORDER = [TACKLE_LIVE, TACKLE_REPLAY, BACKGROUND]
 ACTION_CLASS_NAMES = [CLASS_NAMES[c] for c in (TACKLE_LIVE, TACKLE_REPLAY)]
-
-_LIVE_TYPES = {"tackle-live", "tackle-live-incomplete"}
-_REPLAY_TYPES = {"tackle-replay", "tackle-replay-incomplete"}
 
 
 # ---------------------------------------------------------------------------

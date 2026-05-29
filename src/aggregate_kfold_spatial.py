@@ -30,8 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-CLASS_NAMES_ORDER = ["tackle-live", "tackle-replay", "background"]
+from data.labels import CLASS_NAMES_ORDER
 
 
 def _mean_std(values: List[float]) -> Dict[str, float | List[float]]:

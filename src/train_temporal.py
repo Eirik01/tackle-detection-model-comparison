@@ -19,7 +19,7 @@ Two probes are supported, one per backbone, each its own paper-faithful recipe:
 Training: per-window cross-entropy on the center-frame label, AdamW + cosine
 schedule, optional inverse-frequency class weights (default on, train-split
 only). Game-disjoint 70/15/15 split shared with the spatial probe
-(spatial_protocol.split_games).
+(splits.split_games).
 
 Training-sampler protocol (selected via --protocol):
   'centered' (default)           : one window per event, class-balanced via
@@ -53,7 +53,7 @@ from config import TACDEC_FEATURES, TACDEC_LABELS, TACDEC_MODELS
 from data.balanced_temporal_dataset import (
     get_balanced_temporal_dataloaders,
 )
-from data.kassab_attentive_dataset import (
+from data.temporal_loaders import (
     CLASS_NAMES,
     compute_class_weights,
 )

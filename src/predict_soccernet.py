@@ -43,7 +43,7 @@ import torch
 
 # Run as `python src/predict_soccernet.py`, so sys.path[0] == src/ and these
 # resolve the same way they do for eval_temporal.py.
-from data.kassab_attentive_dataset import CLASS_NAMES, DINOv3DenseLoader
+from data.temporal_loaders import CLASS_NAMES, DINOv3DenseLoader
 from eval_temporal import find_checkpoint, rebuild_probe
 from postprocess import postprocess_clip
 from utils import set_seed

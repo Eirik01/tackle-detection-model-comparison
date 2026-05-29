@@ -41,18 +41,11 @@ import numpy as np
 import torch
 
 # Run as `python src/predict_soccernet_spatial.py`, so sys.path[0] == src/.
-from data.spatial_protocol import BACKGROUND, TACKLE_LIVE, TACKLE_REPLAY
+from data.labels import CLASS_NAMES
 from eval_spatial import infer_clip, load_clip_cls
 from models.dinov3.linear_probe import DINOv3LinearProbe
 from postprocess import postprocess_clip
 from utils import set_seed
-
-
-CLASS_NAMES = {
-    TACKLE_LIVE: "tackle-live",
-    TACKLE_REPLAY: "tackle-replay",
-    BACKGROUND: "background",
-}
 
 
 def _fmt_mmss(t: float) -> str:

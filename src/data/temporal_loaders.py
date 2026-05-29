@@ -1,8 +1,8 @@
 """
 Kassab-style window-list dataset for the patch-token attentive probe protocol.
 
-This is a parallel pipeline to ``kassab_dataset.py`` (BiLSTM-style concat
-stream + center-frame label) but tailored to the attentive probe comparison:
+This is the attentive-probe pipeline (Kassab-style concat stream + center-frame
+label), tailored to the attentive probe comparison:
 
   - Each item is ONE training window: (video_id, anchor_row, label).
   - Features are loaded lazily per item: per-frame patch tokens for DINOv3
@@ -14,8 +14,8 @@ stream + center-frame label) but tailored to the attentive probe comparison:
         bg_min_seg   :  70 source frames -> round(70 * target_fps / 25) rows
         replay_cap   :  280 (unchanged)
         live         :  uncapped
-  - Game-disjoint 70/15/15 split via legacy np.random (matches cell-9, mirrors
-    kassab_dataset.split_by_game).
+  - Game-disjoint 70/15/15 split via legacy np.random (matches TempTAC.ipynb
+    cell-9 split_data_by_game).
 
 Feature file conventions:
     DINOv3 dense  : ``{video_id}_dinov3_l_{fps}fps_dense_features.npy``  (fp16)
@@ -38,11 +38,11 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from data.kassab_dataset import (
-    CLASS_BACKGROUND,
+from data.labels import (
+    BACKGROUND as CLASS_BACKGROUND,
     CLASS_NAMES,
-    CLASS_TACKLE_LIVE,
-    CLASS_TACKLE_REPLAY,
+    TACKLE_LIVE as CLASS_TACKLE_LIVE,
+    TACKLE_REPLAY as CLASS_TACKLE_REPLAY,
 )
 
 
@@ -226,8 +226,8 @@ def build_kassab_attentive_sequences(labels_dir, target_fps,
 
 def split_by_game(sequences, train=0.70, val=0.15, seed=42):
     """
-    Game-disjoint split with the legacy np.random RNG (matches cell-9 of
-    TempTAC.ipynb and ``kassab_dataset.split_by_game`` byte-for-byte).
+    Game-disjoint split with the legacy np.random RNG (matches cell-9
+    split_data_by_game of TempTAC.ipynb byte-for-byte).
     """
     games = sorted({s["game_id"] for s in sequences})
     np.random.seed(seed)

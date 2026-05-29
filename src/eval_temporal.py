@@ -1,6 +1,6 @@
 """
 Evaluate a trained attentive probe on TACDEC. Three tracks, all keyed off the
-same game-disjoint split as training (spatial_protocol.split_games, shared
+same game-disjoint split as training (splits.split_games, shared
 with the spatial probe).
 
 Tracks (selected via --metric):
@@ -44,7 +44,7 @@ from config import RESULTS_DIR, TACDEC_FEATURES, TACDEC_LABELS, TACDEC_MODELS
 from data.balanced_temporal_dataset import (
     get_balanced_temporal_dataloaders,
 )
-from data.kassab_attentive_dataset import (
+from data.temporal_loaders import (
     CLASS_NAMES,
     DINOv3DenseLoader,
     VJEPA2DenseLoader,
@@ -53,7 +53,7 @@ from data.kassab_attentive_dataset import (
 from data.kassab_concat_dataset import (
     get_kassab_concat_temporal_dataloaders,
 )
-from data.spatial_protocol import (
+from data.splits import (
     split_games as split_games_by_clip,
     split_games_from_file,
 )

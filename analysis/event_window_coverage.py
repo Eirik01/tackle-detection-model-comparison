@@ -15,7 +15,7 @@ from collections import Counter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from data.spatial_protocol import build_frame_labels
+from data.splits import build_frame_labels
 from data.temporal_protocol import (
     labels_at_5fps,
     extract_events_5fps,

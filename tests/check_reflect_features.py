@@ -37,7 +37,7 @@ from src.config import (
     TACDEC_FEATURES_VJEPA2,
     TACDEC_LABELS,
 )
-from src.data.kassab_attentive_dataset import (
+from src.data.temporal_loaders import (
     DINOv3DenseLoader,
     VJEPA2DenseLoader,
 )

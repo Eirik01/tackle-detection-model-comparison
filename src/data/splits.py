@@ -20,13 +20,15 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-
-TACKLE_LIVE = 0
-TACKLE_REPLAY = 1
-BACKGROUND = 2
-
-_LIVE_TYPES = {"tackle-live", "tackle-live-incomplete"}
-_REPLAY_TYPES = {"tackle-replay", "tackle-replay-incomplete"}
+# Class scheme lives in data/labels.py; re-exported here so existing callers of
+# ``from data.splits import TACKLE_LIVE, ...`` keep working.
+from data.labels import (  # noqa: F401
+    BACKGROUND,
+    LIVE_TYPES as _LIVE_TYPES,
+    REPLAY_TYPES as _REPLAY_TYPES,
+    TACKLE_LIVE,
+    TACKLE_REPLAY,
+)
 
 
 def build_frame_labels(label_path: str | Path) -> np.ndarray:
