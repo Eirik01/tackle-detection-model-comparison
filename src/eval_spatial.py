@@ -169,10 +169,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--metric", type=str, default="tight", choices=["tight", "loose"])
     p.add_argument("--nms", action="store_true", help="Apply cross-class NMS on top of segment detection.")
 
-    p.add_argument("--profile-efficiency", action="store_true",
-                   help="After the normal eval, profile the linear head: trainable "
-                        "params (M), mean batch latency (ms, bs=16, fp32) and peak "
-                        "VRAM (MiB). Requires CUDA; appends to results/head_efficiency.csv.")
 
     return p.parse_args()
 
@@ -457,8 +453,8 @@ def main() -> None:
     print(f"        confusion_matrix_natural.png")
     print(f"        confusion_matrix_balanced.png")
 
-    # --- Optional: head-only efficiency profile -------------------------
-    if args.profile_efficiency:
+    # --- Head-only efficiency profile (always on when CUDA is available) ---
+    if torch.cuda.is_available():
         print("\n[profile] Head-only efficiency (bs=16, fp32)")
         # Lazily yield per-clip CLS features (already cached on disk; same files
         # consumed by the normal eval loop). Each yielded tensor is a chunk of
@@ -485,6 +481,8 @@ def main() -> None:
         print(f"  peak head VRAM (MiB):     {prof['peak_vram_mib']:.2f}")
         print(f"  device:                   {prof['device']}")
         print(f"  appended to:              {prof['csv_path']}")
+    else:
+        print("\n[profile] Skipped head-only efficiency profile (no CUDA device).")
 
 
 if __name__ == "__main__":

@@ -562,11 +562,6 @@ def main():
                          "evaluates on the positional-slice pool that matches "
                          "Kassab's reported numbers; 'correct' evaluates on "
                          "the game-disjoint partition.")
-    ap.add_argument("--profile-efficiency", action="store_true",
-                    help="After the normal eval, profile the attentive head: "
-                         "trainable params (M), mean batch latency (ms, bs=16, "
-                         "fp32) and peak VRAM (MiB). Requires CUDA; appends to "
-                         "results/head_efficiency.csv.")
     args = ap.parse_args()
 
     set_seed(args.seed)
@@ -867,8 +862,10 @@ def main():
         Path(args.save_json).write_text(json.dumps(out, indent=2, default=float))
         print(f"\nResults saved to {args.save_json}")
 
-    # ---- Optional: head-only efficiency profile ----------------------------
-    if args.profile_efficiency:
+    # ---- Head-only efficiency profile (always on when CUDA is available) ----
+    if not torch.cuda.is_available():
+        print("\n[profile] Skipped head-only efficiency profile (no CUDA device).")
+    else:
         print("\n" + "=" * 60)
         print("Head-only efficiency profile (bs=16, fp32)")
         print("=" * 60)
@@ -909,7 +906,7 @@ def main():
             )
         else:
             raise NotImplementedError(
-                f"--profile-efficiency not wired for --protocol {args.protocol!r}"
+                f"head efficiency profile not wired for --protocol {args.protocol!r}"
             )
 
         # The DataLoader yields dict batches; the profiler wants raw feature

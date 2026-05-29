@@ -69,13 +69,12 @@ uv run python src/train_spatial.py \
 echo ""
 echo "[stage 2/2] Evaluation"
 echo "------------------------------------------"
-# Eval always runs the head-only efficiency profile (--profile-efficiency):
-# params / latency / peak VRAM -> results/head_efficiency.csv. GPU is pinned to
-# rtx30 above so the numbers are comparable across pipelines.
+# Eval always profiles the head (params / latency / peak VRAM ->
+# results/head_efficiency.csv) when CUDA is present. GPU is pinned to rtx30
+# above so the numbers are comparable across pipelines.
 uv run python src/eval_spatial.py \
     --run-dir "${RUN_DIR}" \
-    --metric  "${METRIC}" \
-    --profile-efficiency
+    --metric  "${METRIC}"
 
 echo ""
 echo "=========================================="

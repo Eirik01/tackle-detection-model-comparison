@@ -155,8 +155,7 @@ uv run python -u src/eval_temporal.py \
     --padding-mode ${PADDING_MODE} \
     --split-mode ${SPLIT_MODE} \
     "${SPLIT_FLAGS[@]}" \
-    --save-json ${EVAL_OUT} \
-    --profile-efficiency
+    --save-json ${EVAL_OUT}
 
 echo
 echo "=========================================="

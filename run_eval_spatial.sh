@@ -29,12 +29,12 @@ echo "Run dir: ${RUN_DIR}"
 echo "Metric:  ${METRIC}"
 echo "=========================================="
 
-# --profile-efficiency always on: appends head params / latency / peak VRAM to
-# results/head_efficiency.csv. GPU is pinned to rtx30 above for comparability.
+# Eval always profiles the head (params / latency / peak VRAM ->
+# results/head_efficiency.csv) when CUDA is present. GPU is pinned to rtx30
+# above for comparability.
 uv run python src/eval_spatial.py \
     --run-dir "${RUN_DIR}" \
-    --metric  "${METRIC}" \
-    --profile-efficiency
+    --metric  "${METRIC}"
 
 echo "=========================================="
 echo "Evaluation complete."
