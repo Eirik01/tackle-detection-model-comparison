@@ -86,9 +86,6 @@ results/*.pt
 # KASSAB TACDEC FOLDER
 tacdec-kassab-implementation/
 
-# uv
-uv.lock
-
 # Logs
 *.out
 
