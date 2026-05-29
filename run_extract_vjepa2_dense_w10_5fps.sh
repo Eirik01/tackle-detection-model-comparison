@@ -106,7 +106,7 @@ echo "=========================================="
 uv run python extract_features.py \
     --model ${BACKBONE_TYPE} \
     --size ${BACKBONE_SIZE} \
-    --output /cluster/work/projects/ec12/ec-eirikto/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE} \
+    --output ${FOX_DATADIR_PATH}/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE} \
     --fps ${EXTRACT_FPS} \
     --batch-size 16 \
     --device cuda \
@@ -120,4 +120,4 @@ uv run python extract_features.py \
     ${OVERRIDE_ARG}
 
 echo "Done. Output dir:"
-echo "  /cluster/work/projects/ec12/ec-eirikto/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE}/*_dense_w${WINDOW_SIZE}*.npz"
+echo "  ${FOX_DATADIR_PATH}/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE}/*_dense_w${WINDOW_SIZE}*.npz"

@@ -29,15 +29,9 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# --- Define the data directory on the work drive ---
-export DATADIR="/cluster/work/projects/ec12/ec-eirikto/soccernet"
-export PREDICTIONS_DIR="/cluster/work/projects/ec12/ec-eirikto/predictions"
-export MODELS_DIR="/cluster/work/projects/ec12/ec-eirikto/saved_models"
-
-mkdir -p "$DATADIR"
-mkdir -p "$PREDICTIONS_DIR"
-mkdir -p "$MODELS_DIR"
-
-echo "Using SoccerNet directory: $DATADIR"
-echo "Predictions will be saved to: $PREDICTIONS_DIR"
-echo "Models directory: $MODELS_DIR"
+# --- Work-area root for large, regenerable data (features, predictions,
+#     models, results). Override via .env or the environment to run off-cluster;
+#     defaults to the UiO FOX HPC work area. Mirrors FOX_DATADIR_PATH in
+#     src/config.py so the shell scripts and Python agree on one location. ---
+export FOX_DATADIR_PATH="${FOX_DATADIR_PATH:-/cluster/work/projects/ec12/ec-eirikto}"
+echo "Work-area root (FOX_DATADIR_PATH): $FOX_DATADIR_PATH"

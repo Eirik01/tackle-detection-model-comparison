@@ -36,7 +36,7 @@ WEIGHT_DECAY=${5:-0}
 
 # Single source of truth for the run directory (mirrors config.TACDEC_RESULTS).
 RUN_NAME="run_${SLURM_JOB_ID}"
-RUN_DIR="/cluster/work/projects/ec12/ec-eirikto/TACDEC/results/dinov3_linear_spatial/${RUN_NAME}"
+RUN_DIR="${FOX_DATADIR_PATH}/TACDEC/results/dinov3_linear_spatial/${RUN_NAME}"
 
 mkdir -p slurm_logs/train_eval/spatial
 

@@ -40,7 +40,7 @@ IDX=${SLURM_ARRAY_TASK_ID}
 LR=${LRS[$((IDX / N_WD))]}
 WD=${WDS[$((IDX % N_WD))]}
 
-SWEEP_ROOT="/cluster/work/projects/ec12/ec-eirikto/TACDEC/results/sweeps"
+SWEEP_ROOT="${FOX_DATADIR_PATH}/TACDEC/results/sweeps"
 RUN_DIR="${SWEEP_ROOT}/dinov3_linear_spatial/seed${SEED}/lr${LR}_wd${WD}"
 
 mkdir -p slurm_logs/sweep/spatial

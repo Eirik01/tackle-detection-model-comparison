@@ -62,7 +62,7 @@ echo "Extracting at $EXTRACT_FPS FPS..."
 uv run python extract_features.py \
     --model dinov3 \
     --size large \
-    --output /cluster/work/projects/ec12/ec-eirikto/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE} \
+    --output ${FOX_DATADIR_PATH}/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE} \
     --fps $EXTRACT_FPS \
     --batch-size 16 \
     --device cuda \
@@ -73,4 +73,4 @@ uv run python extract_features.py \
     ${OVERRIDE_ARG}
 
 echo "Feature extraction completed for videos [$START_IDX:$END_IDX]!"
-echo "Results saved to: /cluster/work/projects/ec12/ec-eirikto/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE}/"
+echo "Results saved to: ${FOX_DATADIR_PATH}/TACDEC/features/${BACKBONE_TYPE}_${BACKBONE_SIZE}/"

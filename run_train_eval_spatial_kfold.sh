@@ -36,7 +36,7 @@ N_FOLDS=${5:-5}
 WEIGHT_DECAY=${6:-0}
 
 BASE_NAME="kfold_${SLURM_JOB_ID}"
-BASE_DIR="/cluster/work/projects/ec12/ec-eirikto/TACDEC/results/dinov3_linear_spatial/${BASE_NAME}"
+BASE_DIR="${FOX_DATADIR_PATH}/TACDEC/results/dinov3_linear_spatial/${BASE_NAME}"
 
 mkdir -p slurm_logs/train_eval/spatial_kfold
 mkdir -p "${BASE_DIR}"
