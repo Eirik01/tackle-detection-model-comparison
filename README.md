@@ -14,7 +14,7 @@ Eliteserien, yellow-card-filtered tackle clips).
 ## The three pipelines
 
 Every pipeline follows the same **two-stage design**: a frozen ViT-Large
-backbone extracts features once, then a lightweight head is trained on the
+backbone extracts features once, then a head is trained on the
 cached features. Backbones are never fine-tuned — only the head is trained.
 
 | # | Backbone (frozen) | Paradigm | Head | Temporal reasoning lives in… | Evaluation |
@@ -151,12 +151,6 @@ uv run python -m src.train_temporal      # attentive probes; --help for backbone
 ```
 ### SoccerNet qualitative check
 
-`untrimmed_footage_experiment/` runs the best pipeline (DINOv3 attentive probe) on one
+`untrimmed_footage_experiment/` is the untrimmed footage
 half of one SoccerNet game and dumps fired tackle events with timestamps for
 manual inspection. See [`untrimmed_footage_experiment/README.md`](untrimmed_footage_experiment/README.md).
-
-## Notes
-
-- The absolute
-  paths in `src/config.py` and the cached-feature workflow assume that
-  environment.
