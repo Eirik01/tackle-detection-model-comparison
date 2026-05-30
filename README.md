@@ -124,7 +124,7 @@ sbatch run_extract_vjepa2_dense_w10_5fps.sh      # V-JEPA 2 dense @ 5 FPS (pipel
 
 # ── Stage 2: train + evaluate each pipeline (GPU) ──────────────────
 sbatch run_train_eval_spatial.sh                 # pipeline 1: DINOv3 linear, single seed-42 split (same test games as 2 & 3)
-sbatch run_train_eval_spatial_kfold.sh           # pipeline 1: DINOv3 linear, 5-fold CV (robustness)
+sbatch run_train_eval_spatial_kfold.sh           # pipeline 1: DINOv3 linear, 5-fold CV
 sbatch run_train_eval_temporal_dinov3.sh         # pipeline 2: DINOv3 attentive probe
 sbatch run_train_eval_temporal_vjepa2.sh         # pipeline 3: V-JEPA 2 attentive probe
 
@@ -144,22 +144,11 @@ Run scripts take positional overrides — e.g.
 weight-decay`. The defaults baked into each script are the values selected from
 the sweeps and used in the thesis.
 
-Off-cluster, call the Python entry points directly (they read defaults from
-`src/config.py`):
-
 ```bash
 uv run python extract_features.py --model dinov3 --size large
 uv run python -m src.train_spatial --epochs 50 --lr 2e-4
 uv run python -m src.train_temporal      # attentive probes; --help for backbone/window flags
 ```
-
-### Reproducing the data split
-
-The split is game-disjoint (no match shared across train/val/test) and fixed by
-seed 42 to match the original TACDEC baseline. `dump_kassab_split.py` regenerates
-the exact partition and `verify_kassab_test_split.py` checks the per-class frame
-counts against Kassab's published numbers.
-
 ### SoccerNet qualitative check
 
 `untrimmed_footage_experiment/` runs the best pipeline (DINOv3 attentive probe) on one
@@ -168,10 +157,6 @@ manual inspection. See [`untrimmed_footage_experiment/README.md`](untrimmed_foot
 
 ## Notes
 
-- The code targets the UiO FOX HPC cluster (SLURM, A100 GPUs). The absolute
+- The absolute
   paths in `src/config.py` and the cached-feature workflow assume that
   environment.
-- Features are large (~135 GB for DINOv3 dense at 25 FPS) and regenerable, so
-  they live on the cluster work area, not in the repo.
-- The accompanying thesis (`../thesis_writing/`) documents the methodology,
-  protocols, and results in full.
