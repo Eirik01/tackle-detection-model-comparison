@@ -101,9 +101,9 @@ def main():
     parser.add_argument(
         "--window-size",
         type=int,
-        default=16,
-        help="V-JEPA2 only: number of raw frames per forward (default 16). "
-             "Set to W (e.g. 50) for the patch-token attentive probe protocol."
+        default=10,
+        help="V-JEPA2 only: number of raw frames per forward. "
+             "W=10 (5 FPS * 2 s). Set to W (e.g. 50) for the patch-token attentive probe protocol."
     )
     parser.add_argument(
         "--stride",
@@ -154,8 +154,6 @@ def main():
             device=args.device,
             padding_mode=args.padding_mode,
         )
-    else:
-        raise NotImplementedError(f"Model '{args.model}' not yet implemented")
 
     # Note: both DINOv3Extractor and VJEPA2Extractor call self.load_model() in
     # __init__, so the backbone is already loaded by the time we get here.
@@ -174,7 +172,7 @@ def main():
     if args.model == "dinov3":
         extract_kwargs["save_dense"] = args.save_dense
         extract_kwargs["skip_cls"] = args.skip_cls
-        if args.window_size != 16 or args.stride is not None:
+        if args.window_size is not None or args.stride is not None:
             print("⚠️  --window-size / --stride are V-JEPA2-only and will be ignored "
                   "for DINOv3 (per-frame extractor).")
     elif args.model == "vjepa2":

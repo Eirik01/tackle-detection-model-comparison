@@ -20,13 +20,14 @@ class VJEPA2Extractor(BaseFeatureExtractor):
     V-JEPA2-based feature extractor for video frames.
     
     V-JEPA2 is designed for video understanding and processes temporal sequences.
-    Uses 16-frame sliding windows (0.64s at 25 FPS) to leverage V-JEPA2's temporal 
-    pretraining, providing richer temporal context than single-frame extraction.
-    
+    Uses temporal windows to leverage V-JEPA2's temporal pretraining, providing
+    richer context than single-frame extraction. The canonical protocol is W=10
+    raw frames @ 5 FPS (2.0 s); window_size and stride are configurable.
     Window extraction strategy:
     - Reads all frames from video at original FPS
-    - Creates 16-frame sliding windows centred on each output frame
-    - Pads with zero frames at video boundaries for alignment
+    - Builds left-anchored windows over the valid anchor range;
+      the center-frame label sits at the anchor index, NOT centred on the window
+    - Truncated coverage with anchor drop at boundaries
     - Stride is auto-calculated to match target output FPS
     
     Args:
@@ -58,7 +59,18 @@ class VJEPA2Extractor(BaseFeatureExtractor):
     def get_model_name(self):
         """Returns 'vjepa2_b' or 'vjepa2_l'"""
         return f"vjepa2_{self.model_size[0]}"
-    
+
+    @staticmethod
+    def _tokens_per_window(window_size):
+        """
+        Number of patch tokens V-JEPA2 emits per window.
+
+        Tubelet 2x16x16 over a 256x256 input: the temporal tubelet of 2 halves
+        the frame count, and a 16x16 patch grid (256/16) tiles each tubelet:
+        (window_size // 2) * 16 * 16  ==  window_size * 128.
+        """
+        return (window_size // 2) * 16 * 16
+
     def load_model(self):
         """
         Load V-JEPA2 model from Hugging Face.
@@ -101,8 +113,8 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                   f"(matches DINOv3, applied per-call)")
         print(f"   Frames per clip (config): {self.frames_per_clip}")
 
-    def _process_video_with_windows(self, video_path, output_path, target_fps=2.0,
-                                    window_size=16, stride=None,
+    def _process_video_with_windows(self, video_path, output_path, target_fps=5.0,
+                                    window_size=10, stride=None,
                                     intra_window_stride=None,
                                     profile_efficiency=False):
         """
@@ -119,8 +131,8 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         Args:
             video_path (Path): Path to video file
             output_path (Path): Where to save features
-            target_fps (float): Target output FPS / anchor rate (default: 2.0)
-            window_size (int): Number of frames per V-JEPA2 forward (default: 16)
+            target_fps (float): Target output FPS / anchor rate (default: 5.0)
+            window_size (int): Number of frames per V-JEPA2 forward (default: 10)
             stride (int): Anchor stride in source frames between windows. If
                 None, auto-computed from target_fps via _compute_stride.
             intra_window_stride (int): Stride between adjacent frames *inside*
@@ -228,7 +240,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         # a `.npy` for the dense bytes and a `.meta.npz` sidecar for the
         # protocol metadata (loader prefers this new layout, falls back to
         # the legacy single-.npz path for older extractions).
-        tokens_per_window = (window_size // 2) * 16 * 16
+        tokens_per_window = self._tokens_per_window(window_size)
         dense_path = output_path.with_suffix(".npy")
         meta_path = output_path.parent / (output_path.stem + ".meta.npz")
         print(f"   Streaming dense rows to {dense_path.name}  "
@@ -391,19 +403,20 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         # concurrent unlink (e.g. a re-run racing a running array task).
         output_path.unlink(missing_ok=True)
         print(f"   ✓ Extracted {n_valid} dense features at {target_fps} FPS"
-              f"  (per-frame shape: ({(window_size // 2) * 16 * 16}, {self.feature_dim}), dtype=float16)")
+              f"  (per-frame shape: ({tokens_per_window}, {self.feature_dim}), dtype=float16)")
         print(f"     dense -> {dense_path.name}")
         print(f"     meta  -> {meta_path.name}")
     
-    def extract_features(self, fps=2.0, batch_size=32, start_idx=None, end_idx=None,
+    def extract_features(self, fps=5.0, batch_size=32, start_idx=None, end_idx=None,
                          override=False, profile_efficiency=False,
-                         window_size=16, stride=None, intra_window_stride=None):
+                         window_size=10, stride=None, intra_window_stride=None):
         """
         Override base class to use sliding window extraction.
 
         Args:
-            fps (float): Target FPS for output features (default: 2.0).
-            window_size (int): Number of raw frames per V-JEPA2 forward (default 16).
+            fps (float): Target FPS for output features (default: 5.0).
+            window_size (int): Number of raw frames per V-JEPA2 forward (default 10,
+                the canonical W=10 @ 5 FPS protocol).
                 For the patch-token attentive probe protocol set this to W (e.g. 50).
             stride (int): Stride between successive windows in raw frames. If None,
                 auto-computed as max(1, original_fps / target_fps). Set stride=1 for
@@ -432,28 +445,21 @@ class VJEPA2Extractor(BaseFeatureExtractor):
             print("⚠️  No videos found! Check input directory.")
             return
 
-        # Disk-budget heads-up for non-default dense extraction. Token math:
-        # tubelet 2x16x16 over 256x256 input -> (W/2) * 16*16 = W*128 tokens.
-        # fp16 -> 2 bytes/elem. So per-window bytes = W * 128 * feature_dim * 2.
+        # Disk-budget heads-up for larger-than-baseline dense extraction. Token
+        # math: tubelet 2x16x16 over 256x256 input -> (W/2) * 16*16 = W*128
+        # tokens. fp16 -> 2 bytes/elem. So per-window bytes = W*128*feature_dim*2.
         if window_size != 16:
-            tokens_per_window = (window_size // 2) * 16 * 16
+            tokens_per_window = self._tokens_per_window(window_size)
             mb_per_window = tokens_per_window * self.feature_dim * 2 / 1e6
             print(f"⚠️  Non-default window_size={window_size} "
                   f"-- output files will be ~{mb_per_window:.1f} MB per window @ fp16 "
                   f"({tokens_per_window} tokens × {self.feature_dim} dim). Confirm storage budget.")
 
         for video_path in tqdm(videos, desc="Processing videos"):
-            kind_suffix = "_dense"
-            # Tag dense files with the protocol params so different runs don't collide.
-            # Include intra-window stride when set explicitly (it's distinct from
-            # anchor stride only when the new shared-protocol path is used).
-            if (window_size != 16
-                    or stride is not None
-                    or intra_window_stride is not None):
-                stride_tag = f"_s{stride}" if stride is not None else ""
-                iw_tag = (f"_iw{intra_window_stride}"
-                          if intra_window_stride is not None else "")
-                kind_suffix = f"_dense_w{window_size}{stride_tag}{iw_tag}"
+            stride_tag = f"_s{stride}" if stride is not None else ""
+            iw_tag = (f"_iw{intra_window_stride}"
+                      if intra_window_stride is not None else "")
+            kind_suffix = f"_dense_w{window_size}{stride_tag}{iw_tag}"
             pad_tag = "_reflect" if self.padding_mode == "reflect" else ""
             output_filename = f"{video_path.stem}_{self.get_model_name()}_{fps}fps{pad_tag}{kind_suffix}.npz"
             output_path = self.output_dir / output_filename

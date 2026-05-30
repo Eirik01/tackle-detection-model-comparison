@@ -133,18 +133,6 @@ class BaseFeatureExtractor(ABC):
         right = pad - left
         return cv2.copyMakeBorder(rgb_frame, 0, 0, left, right, cv2.BORDER_REFLECT_101)
 
-    def get_feature_dim(self):
-        """
-        Returns the feature dimension for this model.
-        Assumes self.feature_dim is set by load_model().
-        
-        Returns:
-            int: Feature dimension (e.g., 768 for DINOv3-base, 1024 for DINOv3-large/V-JEPA2)
-        """
-        if not hasattr(self, 'feature_dim'):
-            raise RuntimeError("feature_dim not set. Call load_model() first.")
-        return self.feature_dim
-    
     def _log_extraction_metrics(self, video_path, batch_size_label, num_features, gpu_compute_sec, total_end_to_end_sec, video_duration_sec):
         """
         Log extraction performance metrics to CSV for profiling.

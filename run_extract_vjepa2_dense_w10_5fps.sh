@@ -4,8 +4,8 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=extract_vjepa2_dense
 #SBATCH --partition=accel
-#SBATCH --gpus=1
-#SBATCH --time=00:30:00       # generous; per-task ~5 min at 4 FPS / W=8
+#SBATCH --gpus=rtx30:1
+#SBATCH --time=00:30:00       # generous; per-task ~5 min at 5 FPS / W=10
 #SBATCH --mem=8G
 #SBATCH --output=slurm_logs/extract/vjepa2_dense/%A_%a.out
 #SBATCH --array=0-16          # 17 jobs × ~25 videos = 425 covered
@@ -18,29 +18,29 @@ mkdir -p slurm_logs/extract/vjepa2_dense
 # ─────────────────────────────────────────────────────────────────────────────
 # V-JEPA2-Large dense (spatio-temporal token grid) extraction.
 #
-# Defaults: 4 FPS / window_size=8 (= 2-second context, matches the Kassab
-# 2-second window plan but at coarser temporal density). Auto-stride at fps
-# (no --stride passed) → 1 forward per output frame.
+# Defaults: 5 FPS / window_size=10 (= 2-second context; the canonical temporal
+# protocol). Auto-stride at fps (no --stride passed) → 1 forward per output frame.
 #
-# Preprocessing matches DINOv3 exactly: shortest_edge=256 → center-crop
-# 256×256 (configured in src/feature_extractors/vjepa2_extractor.py at the
-# processor call).
+# Preprocessing defaults to reflect: reflect-pad to square → resize 256×256
+# (matches DINOv3 reflect mode; no pixels cropped away). Set PADDING_MODE=center_crop
+# to override. Configured in src/feature_extractors/vjepa2_extractor.py at the
+# processor call.
 #
-# Token math at default (W=8):
-#   tubelet 2×16×16  →  (8/2) * (16*16)  =  4 * 256  =  1,024 tokens / window
-#   fp16 storage     →  1024 * 1024 * 2 bytes  =  ~2 MB / window
-#   30-s video @ 4 FPS = 120 windows → ~240 MB / video
-#   Full TACDEC (~425 videos) → ~100 GB total.
+# Token math at default (W=10):
+#   tubelet 2×16×16  →  (10/2) * (16*16)  =  5 * 256  =  1,280 tokens / window
+#   fp16 storage     →  1280 * 1024 * 2 bytes  =  ~2.5 MB / window
+#   30-s video @ 5 FPS = 150 windows → ~375 MB / video
+#   Full TACDEC (~425 videos) → ~160 GB total.
 #
 # Output filename includes window/stride tags so different runs don't collide:
-#   {video_id}_vjepa2_l_4.0fps_dense_w8.npz   (auto-stride; no _s tag)
-#   {video_id}_vjepa2_l_25.0fps_dense_w50_s1.npz   (if you re-run at W=50)
+#   {video_id}_vjepa2_l_5.0fps_reflect_dense_w10.npz   (auto-stride; no _s tag)
+#   {video_id}_vjepa2_l_25.0fps_reflect_dense_w50_s1.npz   (if you re-run at W=50)
 #
 # Override examples (keep the hot path defaults light):
-#   sbatch run_extract_vjepa2_dense_w50_25fps.sh                                  # 4 FPS / W=8 default
-#   EXTRACT_FPS=25.0 WINDOW_SIZE=50 STRIDE=1 sbatch run_extract_vjepa2_dense_w50_25fps.sh
+#   sbatch run_extract_vjepa2_dense_w10_5fps.sh                                   # 5 FPS / W=10 default
+#   EXTRACT_FPS=25.0 WINDOW_SIZE=50 STRIDE=1 sbatch run_extract_vjepa2_dense_w10_5fps.sh
 #       → fall back to the original W=50 stride-1 plan (~3 TB; only if needed).
-#   OVERRIDE=1 sbatch run_extract_vjepa2_dense_w50_25fps.sh                       # re-extract
+#   OVERRIDE=1 sbatch run_extract_vjepa2_dense_w10_5fps.sh                        # re-extract
 # ─────────────────────────────────────────────────────────────────────────────
 
 export BACKBONE_TYPE="vjepa2"

@@ -4,7 +4,7 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=extract_dinov3_large
 #SBATCH --partition=accel
-#SBATCH --gpus=1
+#SBATCH --gpus=rtx30:1
 #SBATCH --time=0:40:00
 #SBATCH --mem=8G
 #SBATCH --output=slurm_logs/extract/dinov3_large/extraction_%A_%a.out

@@ -30,7 +30,7 @@
 #SBATCH --account=ec12
 #SBATCH --job-name=sn_extract_dinov3
 #SBATCH --partition=accel
-#SBATCH --gpus=1
+#SBATCH --gpus=rtx30:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
 #SBATCH --time=02:00:00
