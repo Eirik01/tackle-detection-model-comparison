@@ -39,7 +39,6 @@ FOX_PROJECT_AREA_PATH = Path(os.getenv("FOX_PROJECT_AREA_PATH", "/fp/projects01/
 TACDEC_VIDEOS = FOX_PROJECT_AREA_PATH / "TACDEC" / "videos"
 TACDEC_LABELS = FOX_PROJECT_AREA_PATH / "TACDEC" / "labels"
 TACDEC_MODELS = FOX_DATADIR_PATH / "TACDEC" / "models"
-TACDEC_CROPS = FOX_PROJECT_AREA_PATH / "TACDEC" / "crops"
 
 # Features live on the work area: large (~135 GB at 25 fps with dense),
 # regenerable, and the project area is essentially full. Subject to the

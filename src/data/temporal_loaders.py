@@ -165,7 +165,7 @@ class DINOv3DenseLoader(_FeatureLoader):
         self.source_fps = float(source_fps) if source_fps is not None else float(fps)
         # Optional extraction-protocol tag inserted before "_dense_features" in
         # the on-disk filename. Mirrors what extract_features.py wrote for
-        # non-default preprocessing (e.g. "reflect", "yolo_reflect").
+        # non-default preprocessing (e.g. "reflect").
         self.dense_tag = dense_tag.strip("_")
         # Stride between successive output rows in source-fps row space.
         # Mirrors what `BaseFeatureExtractor._compute_stride` does at extraction.

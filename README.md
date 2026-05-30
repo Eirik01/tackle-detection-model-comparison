@@ -49,8 +49,7 @@ tackle-detection-model-comparison/
 │   ├── feature_extractors/       # Stage 1: frozen backbones → cached features
 │   │   ├── base_extractor.py
 │   │   ├── dinov3_extractor.py
-│   │   ├── vjepa2_extractor.py
-│   │   └── yolo_crop_extractor.py
+│   │   └── vjepa2_extractor.py
 │   ├── models/                   # Stage 2: the trainable heads
 │   │   ├── dinov3/               #   linear_probe.py, attentive_probe.py
 │   │   └── vjepa2/               #   attentive_pooler.py
@@ -85,7 +84,7 @@ tackle-detection-model-comparison/
 ├── untrimmed_footage_experiment/ # cross-dataset check: best probe on a full
 │                                 #   SoccerNet half (predict_soccernet*.py +
 │                                 #   runners + manual verification; own README)
-├── tests/                        # parity / sanity scripts (split parity, crop pipeline)
+├── tests/                        # parity / sanity scripts (split parity, padding checks)
 ├── results/                      # generated figures
 ├── pyproject.toml                # dependencies (Python 3.12, torch 2.8, transformers 4.57)
 └── slurm_logs/                   # job output

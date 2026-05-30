@@ -6,13 +6,11 @@ Concrete implementation using Meta's DINOv3 vision transformer.
 import torch
 import numpy as np
 import time
-from pathlib import Path
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModel
 from tqdm import tqdm
 import cv2
 from .base_extractor import BaseFeatureExtractor
-from .yolo_crop_extractor import YOLOCropExtractor
 from ..config import HF_TOKEN
 
 
@@ -31,7 +29,7 @@ class DINOv3Extractor(BaseFeatureExtractor):
     """
     
     def __init__(self, input_dir, output_dir, model_size="base", device="cuda",
-                 crop_dir=None, padding_mode="center_crop"):
+                 padding_mode="center_crop"):
         self.model_size = model_size.lower()
 
         if self.model_size not in ["base", "large"]:
@@ -42,8 +40,6 @@ class DINOv3Extractor(BaseFeatureExtractor):
                 f"padding_mode must be 'center_crop' or 'reflect', got '{padding_mode}'"
             )
         self.padding_mode = padding_mode
-
-        self.crop_dir = Path(crop_dir) if crop_dir else None
 
         # Initialize parent class
         super().__init__(input_dir, output_dir, device)
@@ -102,7 +98,7 @@ class DINOv3Extractor(BaseFeatureExtractor):
         else:
             print(f"   Preprocessing: shortest_edge=256 → centre-crop 256×256 (per-call)")
     
-    def extract_features(self, fps=None, batch_size=32, start_idx=None, end_idx=None, override=False, profile_efficiency=False, crop_suffix="yolo", save_dense=False, skip_cls=False):
+    def extract_features(self, fps=None, batch_size=32, start_idx=None, end_idx=None, override=False, profile_efficiency=False, save_dense=False, skip_cls=False):
         """
         Frame-by-frame batch extraction strategy for DINOv3.
 
@@ -147,11 +143,9 @@ class DINOv3Extractor(BaseFeatureExtractor):
 
         for video_path in tqdm(videos, desc="Processing videos"):
             # Filename format: {video_id}_{backbone}_{fps}fps_features.npz
-            # With crops:      {video_id}_{backbone}_{fps}fps_yolo_features.npz
             # Dense (when save_dense=True): same stem, suffix _dense_features.npz
-            suffix = f"_{crop_suffix}" if self.crop_dir else ""
             pad_tag = "_reflect" if self.padding_mode == "reflect" else ""
-            stem = f"{video_path.stem}_{self.get_model_name()}_{fps}fps{suffix}{pad_tag}"
+            stem = f"{video_path.stem}_{self.get_model_name()}_{fps}fps{pad_tag}"
             output_path = self.output_dir / f"{stem}_features.npz"
             dense_path  = self.output_dir / f"{stem}_dense_features.npy"
 
@@ -161,21 +155,12 @@ class DINOv3Extractor(BaseFeatureExtractor):
                 if cls_done and dense_done:
                     continue
 
-            # Load pre-computed crop coordinates if available
-            crops = None
-            if self.crop_dir:
-                crop_path = YOLOCropExtractor.get_crop_path(self.crop_dir, video_path.stem, fps)
-                if crop_path.exists():
-                    crops = YOLOCropExtractor.load_crops(crop_path)
-                else:
-                    print(f"  WARNING: no crop file found for {video_path.stem}, using full frame")
-
             self._process_video(video_path, output_path, fps, batch_size,
-                                profile_efficiency, crops,
+                                profile_efficiency,
                                 save_dense=save_dense, dense_path=dense_path,
                                 skip_cls=skip_cls)
     
-    def _process_video(self, video_path, output_path, fps, batch_size, profile_efficiency=False, crops=None, save_dense=False, dense_path=None, skip_cls=False):
+    def _process_video(self, video_path, output_path, fps, batch_size, profile_efficiency=False, save_dense=False, dense_path=None, skip_cls=False):
         """
         Process a single video file with frame-by-frame batch extraction and save features.
 
@@ -234,19 +219,13 @@ class DINOv3Extractor(BaseFeatureExtractor):
         # frames, so peak RSS is dominated by the dense accumulator (~6 GB for
         # a 45-min half at 5 FPS) rather than the raw decode (~37 GB).
         batch = []
-        sampled_idx = 0
         num_sampled = 0
         success, frame = cap.read()
         count = 0
         while success:
             if count % skip_interval == 0:
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                if crops is not None and sampled_idx < len(crops):
-                    x1, y1, x2, y2 = crops[sampled_idx]
-                    if x1 >= 0:
-                        rgb_frame = self._apply_crop(rgb_frame, x1, y1, x2, y2)
                 batch.append(rgb_frame)
-                sampled_idx += 1
                 if len(batch) == batch_size:
                     flush(batch)
                     num_sampled += len(batch)

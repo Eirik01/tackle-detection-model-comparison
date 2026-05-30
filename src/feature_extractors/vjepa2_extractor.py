@@ -10,11 +10,9 @@ import torch
 import numpy as np
 import cv2
 import time
-from pathlib import Path
 from transformers import AutoModel, AutoVideoProcessor
 from tqdm import tqdm
 from .base_extractor import BaseFeatureExtractor
-from .yolo_crop_extractor import YOLOCropExtractor
 
 
 class VJEPA2Extractor(BaseFeatureExtractor):
@@ -38,7 +36,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         device (str): 'cuda' or 'cpu'
     """
     
-    def __init__(self, input_dir, output_dir, model_size="large", device="cuda", crop_dir=None,
+    def __init__(self, input_dir, output_dir, model_size="large", device="cuda",
                  padding_mode="reflect"):
         self.model_size = model_size.lower()
 
@@ -50,8 +48,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                 f"padding_mode must be 'center_crop' or 'reflect', got '{padding_mode}'"
             )
         self.padding_mode = padding_mode
-
-        self.crop_dir = Path(crop_dir) if crop_dir else None
 
         # Initialize parent class
         super().__init__(input_dir, output_dir, device)
@@ -108,7 +104,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
     def _process_video_with_windows(self, video_path, output_path, target_fps=2.0,
                                     window_size=16, stride=None,
                                     intra_window_stride=None,
-                                    profile_efficiency=False, crops=None):
+                                    profile_efficiency=False):
         """
         Process video using sliding temporal windows (V-JEPA2's strength).
 
@@ -263,14 +259,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
             return True
 
         for out_row, anchor_idx in enumerate(range(valid_lo, valid_hi + 1)):
-            # Determine crop for this window (from center frame's crop entry).
-            # Crop list is anchor-aligned: index by anchor_idx, not by output row.
-            crop_box = None
-            if crops is not None and anchor_idx < len(crops):
-                x1, y1, x2, y2 = crops[anchor_idx]
-                if x1 >= 0:
-                    crop_box = (x1, y1, x2, y2)
-
             # 'clamp' is a safety net; valid anchors never trigger it.
             indices = select_source_frames(
                 anchor_idx=anchor_idx,
@@ -300,8 +288,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
             window_frames = []
             for i in indices:
                 frame = frame_cache[i]
-                if crop_box is not None:
-                    frame = self._apply_crop(frame, *crop_box)
                 if self.padding_mode == "reflect":
                     # Square the frame with border-reflected padding before the
                     # processor sees it, then resize to 256x256 so no pixels
@@ -410,7 +396,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         print(f"     meta  -> {meta_path.name}")
     
     def extract_features(self, fps=2.0, batch_size=32, start_idx=None, end_idx=None,
-                         override=False, profile_efficiency=False, crop_suffix="yolo",
+                         override=False, profile_efficiency=False,
                          window_size=16, stride=None, intra_window_stride=None):
         """
         Override base class to use sliding window extraction.
@@ -427,7 +413,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
             end_idx (int): End index for video processing (exclusive, 0-based)
             override (bool): If True, re-extract and overwrite existing feature files
             profile_efficiency (bool): If True, measure end-to-end and GPU throughput
-            crop_suffix (str): Suffix added to filename when crops are used
         """
         videos = self._get_all_videos()
         total_videos = len(videos)
@@ -458,7 +443,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                   f"({tokens_per_window} tokens × {self.feature_dim} dim). Confirm storage budget.")
 
         for video_path in tqdm(videos, desc="Processing videos"):
-            suffix = f"_{crop_suffix}" if self.crop_dir else ""
             kind_suffix = "_dense"
             # Tag dense files with the protocol params so different runs don't collide.
             # Include intra-window stride when set explicitly (it's distinct from
@@ -471,24 +455,16 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                           if intra_window_stride is not None else "")
                 kind_suffix = f"_dense_w{window_size}{stride_tag}{iw_tag}"
             pad_tag = "_reflect" if self.padding_mode == "reflect" else ""
-            output_filename = f"{video_path.stem}_{self.get_model_name()}_{fps}fps{suffix}{pad_tag}{kind_suffix}.npz"
+            output_filename = f"{video_path.stem}_{self.get_model_name()}_{fps}fps{pad_tag}{kind_suffix}.npz"
             output_path = self.output_dir / output_filename
 
             if output_path.exists() and not override:
                 continue
 
-            crops = None
-            if self.crop_dir:
-                crop_path = YOLOCropExtractor.get_crop_path(self.crop_dir, video_path.stem, fps)
-                if crop_path.exists():
-                    crops = YOLOCropExtractor.load_crops(crop_path)
-                else:
-                    print(f"  WARNING: no crop file found for {video_path.stem}, using full frame")
-
             self._process_video_with_windows(
                 video_path, output_path, target_fps=fps,
                 window_size=window_size, stride=stride,
                 intra_window_stride=intra_window_stride,
-                profile_efficiency=profile_efficiency, crops=crops,
+                profile_efficiency=profile_efficiency,
             )
 
