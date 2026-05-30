@@ -132,7 +132,22 @@ class BaseFeatureExtractor(ABC):
         left = pad // 2
         right = pad - left
         return cv2.copyMakeBorder(rgb_frame, 0, 0, left, right, cv2.BORDER_REFLECT_101)
-    
+
+    def _apply_crop(self, rgb_frame, x1, y1, x2, y2):
+        """
+        Crop frame region and zero-pad to square, preserving aspect ratio.
+        Resizing to 256x256 after padding avoids distorting player proportions.
+        """
+        crop = rgb_frame[y1:y2, x1:x2]
+        h, w = crop.shape[:2]
+        if h == 0 or w == 0:
+            return rgb_frame
+        size = max(h, w)
+        padded = np.zeros((size, size, 3), dtype=np.uint8)
+        dy, dx = (size - h) // 2, (size - w) // 2
+        padded[dy:dy + h, dx:dx + w] = crop
+        return padded
+
     def get_feature_dim(self):
         """
         Returns the feature dimension for this model.

@@ -85,15 +85,6 @@ def main():
         help="Device to use for inference"
     )
     parser.add_argument(
-        "--feature-type",
-        type=str,
-        choices=["cls", "dense"],
-        default="cls",
-        help="V-JEPA2 only: 'cls' saves the mean-pooled per-clip vector. "
-             "'dense' saves the full [T*H*W, D] spatio-temporal token grid "
-             "per clip (used by the paper-faithful vjepa2_attpool head)."
-    )
-    parser.add_argument(
         "--save-dense",
         action="store_true",
         help="DINOv3 only: also save dense patch features alongside CLS as "
@@ -161,7 +152,6 @@ def main():
             output_dir=args.output,
             model_size=args.size,
             device=args.device,
-            feature_type=args.feature_type,
             padding_mode=args.padding_mode,
         )
     else:
@@ -192,7 +182,7 @@ def main():
         extract_kwargs["stride"] = args.stride
         extract_kwargs["intra_window_stride"] = args.intra_window_stride
         if args.save_dense:
-            print("⚠️  --save-dense is DINOv3-only; for V-JEPA2 use --feature-type dense.")
+            print("⚠️  --save-dense is DINOv3-only; V-JEPA2 always writes dense features.")
         if args.skip_cls:
             print("⚠️  --skip-cls is DINOv3-only and will be ignored for V-JEPA2.")
     extractor.extract_features(**extract_kwargs)

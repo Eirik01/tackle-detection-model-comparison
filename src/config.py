@@ -48,6 +48,9 @@ TACDEC_FEATURES = FOX_DATADIR_PATH / "TACDEC" / "features"
 TACDEC_FEATURES_DINOV3 = TACDEC_FEATURES / "dinov3_large"
 TACDEC_FEATURES_VJEPA2 = TACDEC_FEATURES / "vjepa2_large"
 TACDEC_RESULTS = FOX_DATADIR_PATH / "TACDEC" / "results"
+# Stacked-tensor dump matching Kassab's sorted_cls_tokens_features.pt format
+# (see dump_dinov3_kassab_format.py).
+TACDEC_KASSAB_DUMP_DIR = FOX_DATADIR_PATH / "TACDEC" / "dinov3_kassab_format"
 
 # Work-area root for the untrimmed_footage_experiment/ qualitative run. The experiment
 # scripts own what they download / extract / predict; this is just where it

@@ -39,15 +39,11 @@ class VJEPA2Extractor(BaseFeatureExtractor):
     """
     
     def __init__(self, input_dir, output_dir, model_size="large", device="cuda", crop_dir=None,
-                 feature_type="cls", padding_mode="center_crop"):
+                 padding_mode="reflect"):
         self.model_size = model_size.lower()
 
         if self.model_size not in ["large", "huge", "giant"]:
             raise ValueError(f"model_size must be 'large', 'huge', or 'giant', got '{model_size}'")
-
-        if feature_type not in ("cls", "dense"):
-            raise ValueError(f"feature_type must be 'cls' or 'dense', got '{feature_type}'")
-        self.feature_type = feature_type
 
         if padding_mode not in ("center_crop", "reflect"):
             raise ValueError(
@@ -108,19 +104,6 @@ class VJEPA2Extractor(BaseFeatureExtractor):
             print(f"   Preprocessing: shortest_edge=256 -> center-crop 256x256 "
                   f"(matches DINOv3, applied per-call)")
         print(f"   Frames per clip (config): {self.frames_per_clip}")
-    
-    
-    def _apply_crop(self, rgb_frame, x1, y1, x2, y2):
-        """Crop frame region and zero-pad to square, preserving aspect ratio."""
-        crop = rgb_frame[y1:y2, x1:x2]
-        h, w = crop.shape[:2]
-        if h == 0 or w == 0:
-            return rgb_frame
-        size = max(h, w)
-        padded = np.zeros((size, size, 3), dtype=np.uint8)
-        dy, dx = (size - h) // 2, (size - w) // 2
-        padded[dy:dy + h, dx:dx + w] = crop
-        return padded
 
     def _process_video_with_windows(self, video_path, output_path, target_fps=2.0,
                                     window_size=16, stride=None,
@@ -206,14 +189,11 @@ class VJEPA2Extractor(BaseFeatureExtractor):
 
         # Extract features with sliding windows.
         #
-        # For feature_type=="dense" we stream rows directly into a memmap'd
-        # .npy on disk via np.lib.format.open_memmap. This caps RSS at the
-        # streaming source-frame cache (~140 MiB) + the model, instead of
-        # accumulating an in-RAM array that scales with sequence length
-        # (~35 GiB at 13.5k windows × 1280 tokens × 1024 dim × fp16). For
-        # feature_type=="cls" the per-row payload is tiny (4 KB) so the old
-        # in-RAM list is still fine.
-        all_features = [] if self.feature_type != "dense" else None
+        # We stream rows directly into a memmap'd .npy on disk via
+        # np.lib.format.open_memmap. This caps RSS at the streaming source-frame
+        # cache (~140 MiB) + the model, instead of accumulating an in-RAM array
+        # that scales with sequence length (~35 GiB at 13.5k windows × 1280
+        # tokens × 1024 dim × fp16).
         dense_mmap = None
         dense_path = None
         meta_path = None
@@ -252,19 +232,18 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         # a `.npy` for the dense bytes and a `.meta.npz` sidecar for the
         # protocol metadata (loader prefers this new layout, falls back to
         # the legacy single-.npz path for older extractions).
-        if self.feature_type == "dense":
-            tokens_per_window = (window_size // 2) * 16 * 16
-            dense_path = output_path.with_suffix(".npy")
-            meta_path = output_path.parent / (output_path.stem + ".meta.npz")
-            print(f"   Streaming dense rows to {dense_path.name}  "
-                  f"(shape=({n_valid}, {tokens_per_window}, {self.feature_dim}), "
-                  f"fp16, ~{n_valid * tokens_per_window * self.feature_dim * 2 / 1e9:.1f} GB)")
-            dense_mmap = np.lib.format.open_memmap(
-                dense_path,
-                mode="w+",
-                dtype=np.float16,
-                shape=(n_valid, tokens_per_window, self.feature_dim),
-            )
+        tokens_per_window = (window_size // 2) * 16 * 16
+        dense_path = output_path.with_suffix(".npy")
+        meta_path = output_path.parent / (output_path.stem + ".meta.npz")
+        print(f"   Streaming dense rows to {dense_path.name}  "
+              f"(shape=({n_valid}, {tokens_per_window}, {self.feature_dim}), "
+              f"fp16, ~{n_valid * tokens_per_window * self.feature_dim * 2 / 1e9:.1f} GB)")
+        dense_mmap = np.lib.format.open_memmap(
+            dense_path,
+            mode="w+",
+            dtype=np.float16,
+            shape=(n_valid, tokens_per_window, self.feature_dim),
+        )
 
         # Rolling source-frame cache. Frames are read sequentially via cap.read()
         # and dropped as soon as the next pending anchor no longer needs them.
@@ -377,16 +356,11 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                 outputs = self.model(**inputs, skip_predictor=True)
                 last_hidden_state = outputs.last_hidden_state  # [1, num_patches, feature_dim]
 
-                if self.feature_type == "dense":
-                    # Stream the full spatio-temporal token grid straight to
-                    # the memmap'd .npy: write goes through OS page cache, so
-                    # RSS stays flat regardless of clip length.
-                    feat = last_hidden_state[0].cpu().to(torch.float16).numpy()
-                    dense_mmap[out_row] = feat
-                else:
-                    # Mean pooling over all patch tokens -> [feature_dim]
-                    feat = last_hidden_state[0].mean(dim=0).cpu().numpy()
-                    all_features.append(feat)
+                # Stream the full spatio-temporal token grid straight to the
+                # memmap'd .npy: write goes through OS page cache, so RSS stays
+                # flat regardless of clip length.
+                feat = last_hidden_state[0].cpu().to(torch.float16).numpy()
+                dense_mmap[out_row] = feat
         
         cap.release()
         frame_cache.clear()
@@ -399,7 +373,7 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         
         total_extraction_time = extraction_end - extraction_start
         
-        num_features = n_valid if self.feature_type == "dense" else len(all_features)
+        num_features = n_valid
         if profile_efficiency:
             self._log_extraction_metrics(
                 video_path=video_path,
@@ -410,37 +384,30 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                 video_duration_sec=video_duration_sec
             )
 
-        if self.feature_type == "dense":
-            # Flush the memmap and persist the protocol metadata sidecar. The
-            # `.npy` already holds the full (n_valid, tokens, D) fp16 grid in
-            # the canonical row order [valid_lo, valid_hi]. Loader maps anchor
-            # -> row via row = anchor - valid_lo and prefers this layout over
-            # the legacy single-.npz path.
-            dense_mmap.flush()
-            del dense_mmap  # closes the underlying mmap
-            np.savez(
-                meta_path,
-                valid_lo=np.int32(valid_lo),
-                valid_hi=np.int32(valid_hi),
-                anchor_stride=np.int32(stride),
-                intra_window_stride=np.int32(intra_window_stride),
-                window_length=np.int32(window_size),
-                n_source_frames=np.int32(n_source_frames),
-            )
-            # Best-effort: clear the now-stale legacy .npz so the loader does
-            # not see two candidates for the same video on re-runs.
-            if output_path.exists():
-                output_path.unlink()
-            print(f"   ✓ Extracted {n_valid} dense features at {target_fps} FPS"
-                  f"  (per-frame shape: ({(window_size // 2) * 16 * 16}, {self.feature_dim}), dtype=float16)")
-            print(f"     dense -> {dense_path.name}")
-            print(f"     meta  -> {meta_path.name}")
-        else:
-            # [Seq_Len, feature_dim] -- mean-pooled per-clip summary
-            stacked = np.stack(all_features)
-            np.savez_compressed(output_path, cls=stacked)
-            print(f"   ✓ Extracted {len(stacked)} cls features at {target_fps} FPS"
-                  f"  (per-frame shape: {stacked.shape[1:]}, dtype={stacked.dtype})")
+        # Flush the memmap and persist the protocol metadata sidecar. The
+        # `.npy` already holds the full (n_valid, tokens, D) fp16 grid in
+        # the canonical row order [valid_lo, valid_hi]. Loader maps anchor
+        # -> row via row = anchor - valid_lo and prefers this layout over
+        # the legacy single-.npz path.
+        dense_mmap.flush()
+        del dense_mmap  # closes the underlying mmap
+        np.savez(
+            meta_path,
+            valid_lo=np.int32(valid_lo),
+            valid_hi=np.int32(valid_hi),
+            anchor_stride=np.int32(stride),
+            intra_window_stride=np.int32(intra_window_stride),
+            window_length=np.int32(window_size),
+            n_source_frames=np.int32(n_source_frames),
+        )
+        # Best-effort: clear the now-stale legacy .npz so the loader does
+        # not see two candidates for the same video on re-runs. Tolerate a
+        # concurrent unlink (e.g. a re-run racing a running array task).
+        output_path.unlink(missing_ok=True)
+        print(f"   ✓ Extracted {n_valid} dense features at {target_fps} FPS"
+              f"  (per-frame shape: ({(window_size // 2) * 16 * 16}, {self.feature_dim}), dtype=float16)")
+        print(f"     dense -> {dense_path.name}")
+        print(f"     meta  -> {meta_path.name}")
     
     def extract_features(self, fps=2.0, batch_size=32, start_idx=None, end_idx=None,
                          override=False, profile_efficiency=False, crop_suffix="yolo",
@@ -483,22 +450,22 @@ class VJEPA2Extractor(BaseFeatureExtractor):
         # Disk-budget heads-up for non-default dense extraction. Token math:
         # tubelet 2x16x16 over 256x256 input -> (W/2) * 16*16 = W*128 tokens.
         # fp16 -> 2 bytes/elem. So per-window bytes = W * 128 * feature_dim * 2.
-        if self.feature_type == "dense" and window_size != 16:
+        if window_size != 16:
             tokens_per_window = (window_size // 2) * 16 * 16
             mb_per_window = tokens_per_window * self.feature_dim * 2 / 1e6
-            print(f"⚠️  Non-default window_size={window_size} with feature_type=dense "
+            print(f"⚠️  Non-default window_size={window_size} "
                   f"-- output files will be ~{mb_per_window:.1f} MB per window @ fp16 "
                   f"({tokens_per_window} tokens × {self.feature_dim} dim). Confirm storage budget.")
 
         for video_path in tqdm(videos, desc="Processing videos"):
             suffix = f"_{crop_suffix}" if self.crop_dir else ""
-            kind_suffix = "_dense" if self.feature_type == "dense" else "_features"
+            kind_suffix = "_dense"
             # Tag dense files with the protocol params so different runs don't collide.
             # Include intra-window stride when set explicitly (it's distinct from
             # anchor stride only when the new shared-protocol path is used).
-            if self.feature_type == "dense" and (window_size != 16
-                                                  or stride is not None
-                                                  or intra_window_stride is not None):
+            if (window_size != 16
+                    or stride is not None
+                    or intra_window_stride is not None):
                 stride_tag = f"_s{stride}" if stride is not None else ""
                 iw_tag = (f"_iw{intra_window_stride}"
                           if intra_window_stride is not None else "")
@@ -524,26 +491,4 @@ class VJEPA2Extractor(BaseFeatureExtractor):
                 intra_window_stride=intra_window_stride,
                 profile_efficiency=profile_efficiency, crops=crops,
             )
-
-
-if __name__ == "__main__":
-    """
-    Standalone test for V-JEPA2 extractor.
-    """
-    from config import TACDEC_VIDEOS, TACDEC_FEATURES
-    
-    print("="*60)
-    print("Testing V-JEPA2 Feature Extractor")
-    print("="*60)
-    
-    extractor = VJEPA2Extractor(
-        input_dir=TACDEC_VIDEOS,
-        output_dir=TACDEC_FEATURES,
-        model_size="large",
-        device="cuda"
-    )
-    
-    print(f"\nModel: {extractor.get_model_name()}")
-    print(f"Feature dimension: {extractor.get_feature_dim()}")
-    print("\n✅ V-JEPA2 extractor initialized successfully!")
 

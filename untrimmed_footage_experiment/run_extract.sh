@@ -70,9 +70,9 @@ case "${MODE}" in
     vjepa2)
         MODEL=vjepa2
         PADDING_MODE=reflect
-        # V-JEPA 2 has its own arg vocabulary: --feature-type + --window-size,
-        # no CLS/dense flags. Stride is auto (== source_fps/target_fps).
-        EXTRA_FLAGS=(--feature-type dense --window-size "${WINDOW_SIZE}")
+        # V-JEPA 2 always writes dense features; it just needs --window-size.
+        # Stride is auto (== source_fps/target_fps).
+        EXTRA_FLAGS=(--window-size "${WINDOW_SIZE}")
         OUT_DESCR="V-JEPA 2-L dense (reflect, W=${WINDOW_SIZE})"
         OUT_FILE="<stem>_vjepa2_l_${EXTRACT_FPS}fps_reflect_dense_w${WINDOW_SIZE}.npz"
         ;;

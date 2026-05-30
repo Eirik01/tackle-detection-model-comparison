@@ -62,14 +62,13 @@ if [ "$OVERRIDE" = "1" ]; then
     OVERRIDE_ARG="--override"
 fi
 
-# Padding mode: center_crop (default, current behaviour) or reflect (border-
-# reflected padding to square then resize to 256x256). Reflect runs land in
-# files tagged "_reflect" so they don't collide with centre-crop runs.
-PADDING_MODE=${PADDING_MODE:-center_crop}
-PAD_ARG=""
-if [ "$PADDING_MODE" = "reflect" ]; then
-    PAD_ARG="--padding-mode reflect"
-fi
+# Padding mode: reflect (default for V-JEPA2 / the temporal pipeline -- border-
+# reflected padding to square then resize to 256x256, no pixels cropped away) or
+# center_crop. Reflect runs land in files tagged "_reflect" so they don't
+# collide with centre-crop runs. Passed explicitly so it never falls back to the
+# extract_features.py CLI default of center_crop.
+PADDING_MODE=${PADDING_MODE:-reflect}
+PAD_ARG="--padding-mode $PADDING_MODE"
 
 STRIDE_ARG=""
 if [ -n "$STRIDE" ]; then
@@ -126,7 +125,6 @@ uv run python extract_features.py \
     --device cuda \
     --start-idx ${START_IDX} \
     --end-idx ${END_IDX} \
-    --feature-type dense \
     --window-size ${WINDOW_SIZE} \
     ${STRIDE_ARG} \
     ${INTRA_ARG} \

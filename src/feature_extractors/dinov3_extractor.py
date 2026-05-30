@@ -13,7 +13,7 @@ from tqdm import tqdm
 import cv2
 from .base_extractor import BaseFeatureExtractor
 from .yolo_crop_extractor import YOLOCropExtractor
-from ..config import HF_TOKEN, TACDEC_VIDEOS, TACDEC_FEATURES
+from ..config import HF_TOKEN
 
 
 class DINOv3Extractor(BaseFeatureExtractor):
@@ -296,21 +296,6 @@ class DINOv3Extractor(BaseFeatureExtractor):
             # concatenate without a further dtype change.
             dense_output = np.concatenate(all_dense_features, axis=0)
             np.save(dense_path, dense_output)
-    
-    def _apply_crop(self, rgb_frame, x1, y1, x2, y2):
-        """
-        Crop frame region and zero-pad to square, preserving aspect ratio.
-        Resizing to 256x256 after padding avoids distorting player proportions.
-        """
-        crop = rgb_frame[y1:y2, x1:x2]
-        h, w = crop.shape[:2]
-        if h == 0 or w == 0:
-            return rgb_frame
-        size = max(h, w)
-        padded = np.zeros((size, size, 3), dtype=np.uint8)
-        dy, dx = (size - h) // 2, (size - w) // 2
-        padded[dy:dy + h, dx:dx + w] = crop
-        return padded
 
     def extract_frame_features(self, frames, return_dense=False):
         """
@@ -366,30 +351,3 @@ class DINOv3Extractor(BaseFeatureExtractor):
                 return cls_features, dense_features
 
         return cls_features
-
-
-if __name__ == "__main__":
-    """
-    Standalone test for DINOv3 extractor.
-    """
-    
-    print("="*60)
-    print("Testing DINOv3 Feature Extractor")
-    print("="*60)
-    
-    # Test with base model
-    extractor = DINOv3Extractor(
-        input_dir=TACDEC_VIDEOS,
-        output_dir=TACDEC_FEATURES,
-        model_size="base",
-        device="cuda"
-    )
-    
-    print(f"\n📊 Extractor Info:")
-    print(f"   Model name: {extractor.get_model_name()}")
-    print(f"   Feature dim: {extractor.get_feature_dim()}")
-    
-    # Process limited set for testing (first 2 videos)
-    extractor.extract_features(fps=2.0, batch_size=16, start_idx=0, end_idx=2)
-    
-    print("\n✅ Test completed!")

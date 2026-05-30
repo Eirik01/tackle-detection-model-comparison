@@ -31,7 +31,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from config import TACDEC_FEATURES  # noqa: E402
+from config import TACDEC_FEATURES, TACDEC_KASSAB_DUMP_DIR  # noqa: E402
 
 
 def main():
@@ -46,8 +46,9 @@ def main():
     parser.add_argument("--features-dir", type=str, default=None,
                         help=f"Override features dir. Default: {TACDEC_FEATURES}/dinov3_large")
     parser.add_argument("--output-dir", type=str,
-                        default="/cluster/work/projects/ec12/ec-eirikto/TACDEC/dinov3_kassab_format",
-                        help="Where to write the stacked tensor and metadata.")
+                        default=str(TACDEC_KASSAB_DUMP_DIR),
+                        help=f"Where to write the stacked tensor and metadata. "
+                             f"Default: {TACDEC_KASSAB_DUMP_DIR}")
     args = parser.parse_args()
 
     features_dir = Path(args.features_dir) if args.features_dir else (TACDEC_FEATURES / "dinov3_large")
