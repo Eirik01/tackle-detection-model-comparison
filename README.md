@@ -19,9 +19,14 @@ cached features. Backbones are never fine-tuned — only the head is trained.
 
 | # | Backbone (frozen) | Paradigm | Head | Temporal reasoning lives in… | Evaluation |
 |---|-------------------|----------|------|------------------------------|------------|
-| 1 | DINOv3 ViT-L | spatial (per-frame) | linear probe (~5k params) | nowhere | 5-fold game-disjoint CV |
+| 1 | DINOv3 ViT-L | spatial (per-frame) | linear probe (~5k params) | nowhere | single 70/15/15 split (seed 42) + 5-fold game-disjoint CV |
 | 2 | DINOv3 ViT-L | spatial (per-frame) | attentive probe | the head | single 70/15/15 split (seed 42) |
 | 3 | V-JEPA 2 ViT-L | spatio-temporal | attentive probe | the backbone | single 70/15/15 split (seed 42) |
+
+Pipeline 1 is evaluated **two ways**: (1) on the *same* single seed-42 game-disjoint
+split as pipelines 2 & 3 — identical held-out test games, so all three pipelines are
+compared like-for-like — and (2) with 5-fold game-disjoint cross-validation, for a more
+robust estimate of the linear probe that doesn't hinge on one split.
 
 Both backbones are ViT-Large (~300 M params, 1024-d embeddings) so the
 comparison isolates *representation type* (image vs. video pre-training) from
@@ -119,8 +124,8 @@ sbatch run_extract_dinov3_large_array.sh        # DINOv3 dense @ 25 FPS  (pipeli
 sbatch run_extract_vjepa2_dense_w10_5fps.sh      # V-JEPA 2 dense @ 5 FPS (pipeline 3)
 
 # ── Stage 2: train + evaluate each pipeline (GPU) ──────────────────
-sbatch run_train_eval_spatial_kfold.sh           # pipeline 1: DINOv3 linear, 5-fold CV
-sbatch run_train_eval_spatial.sh                 # pipeline 1: single split (quick)
+sbatch run_train_eval_spatial.sh                 # pipeline 1: DINOv3 linear, single seed-42 split (same test games as 2 & 3)
+sbatch run_train_eval_spatial_kfold.sh           # pipeline 1: DINOv3 linear, 5-fold CV (robustness)
 sbatch run_train_eval_temporal_dinov3.sh         # pipeline 2: DINOv3 attentive probe
 sbatch run_train_eval_temporal_vjepa2.sh         # pipeline 3: V-JEPA 2 attentive probe
 

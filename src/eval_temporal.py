@@ -57,7 +57,7 @@ from data.splits import (
     split_games as split_games_by_clip,
     split_games_from_file,
 )
-from data.temporal_protocol import STRIDE_S, extract_events_5fps
+from data.temporal_protocol import extract_events_5fps
 from head_efficiency import PROFILE_BATCH_SIZE, profile_head
 from models.dinov3.attentive_probe import DINOv3AttentiveProbe
 from models.vjepa2.attentive_pooler import AttentiveClassifier
@@ -231,7 +231,6 @@ def run_per_clip_map(
     num_classes: int,
     device: torch.device,
     feature_cache_size: int,
-    delta_grid: list[float],
     min_distance_sec: float,
     sigma: float,
     source_fps: float | None = None,
@@ -239,7 +238,8 @@ def run_per_clip_map(
 ):
     """
     Iterate every test-game video, run stride-1 inference, peak-detect events,
-    aggregate, then evaluate average-mAP at the requested deltas.
+    aggregate, then evaluate average-mAP. Uses the SoccerNet 'tight' metric
+    (delta in {1..5}s).
     """
     eff_source = source_fps if source_fps is not None else target_fps
     if backbone == "dinov3":
@@ -814,7 +814,6 @@ def main():
             num_classes=args.num_classes,
             device=device,
             feature_cache_size=args.feature_cache,
-            delta_grid=[1.0, 2.0, 3.0, 4.0, 5.0],
             min_distance_sec=args.min_distance_sec,
             sigma=args.sigma,
             dense_tag=dense_tag,

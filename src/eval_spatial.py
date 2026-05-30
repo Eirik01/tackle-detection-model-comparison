@@ -26,12 +26,8 @@ import argparse
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
@@ -39,7 +35,6 @@ from tqdm import tqdm
 
 import config
 from data.labels import (
-    BACKGROUND,
     CLASS_NAMES,
     CLASS_ORDER,
     LIVE_TYPES as _LIVE_TYPES,
@@ -48,7 +43,8 @@ from data.labels import (
     TACKLE_REPLAY,
 )
 from data.splits import balance_split, build_frame_labels
-from head_efficiency import PROFILE_BATCH_SIZE, profile_head
+from head_efficiency import profile_head
+from plot_utils import save_confusion_matrix
 from models.dinov3.linear_probe import DINOv3LinearProbe
 from postprocess import postprocess_clip
 from soccernet_eval import evaluate_average_map
@@ -106,25 +102,6 @@ def print_confusion_matrix(cm: np.ndarray, indent: str = "       ") -> None:
     print(f"{indent}{'':<{row_label_w}}" + "".join(f"{n:>{col_w}}" for n in names))
     for i, name in enumerate(names):
         print(f"{indent}{name:<{row_label_w}}" + "".join(f"{cm[i, j]:>{col_w}d}" for j in range(len(names))))
-
-
-def save_confusion_matrix(cm: np.ndarray, output_path: Path, title: str) -> None:
-    fig, ax = plt.subplots(figsize=(5, 4.5))
-    im = ax.imshow(cm, cmap="Blues")
-    ax.set_xticks(range(len(CLASS_ORDER)))
-    ax.set_yticks(range(len(CLASS_ORDER)))
-    ax.set_xticklabels([CLASS_NAMES[c] for c in CLASS_ORDER], rotation=30, ha="right")
-    ax.set_yticklabels([CLASS_NAMES[c] for c in CLASS_ORDER])
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
-    ax.set_title(title)
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, str(cm[i, j]), ha="center", va="center", color="black", fontsize=9)
-    fig.colorbar(im, ax=ax)
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,9 @@ Protocol:
    DINOv3 linear-probe recipe. Decoupled stop/save: the checkpoint is taken
    at the epoch of maximum validation macro-F1; early-stopping triggers when
    validation loss has not improved for --patience epochs.
-5. Evaluate the macro-F1-best checkpoint on the balanced test pool.
+Test-set evaluation is intentionally NOT done here — it lives in eval_spatial.py
+(which reads this run's splits.json). train_spatial only fits the probe and
+selects the checkpoint on validation macro-F1.
 
 Run from tackle-detection-model-comparison/ as:
     python src/train_spatial.py [--flags ...]
@@ -26,16 +28,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
 import config
 from data.labels import CLASS_NAMES, CLASS_ORDER
@@ -135,42 +132,6 @@ def run_epoch(
     targets = np.concatenate(all_targets)
     acc = float((preds == targets).mean())
     return total_loss / total_n, acc, preds, targets
-
-
-def per_class_accuracy(targets: np.ndarray, preds: np.ndarray) -> Dict[int, float]:
-    out: Dict[int, float] = {}
-    for cls in CLASS_ORDER:
-        mask = targets == cls
-        out[cls] = float((preds[mask] == cls).mean()) if mask.any() else float("nan")
-    return out
-
-
-def print_confusion_matrix(cm: np.ndarray, indent: str = "       ") -> None:
-    names = [CLASS_NAMES[c] for c in CLASS_ORDER]
-    col_w = max(14, max(len(n) for n in names) + 2)
-    row_label_w = max(len(n) for n in names)
-    print(f"{indent}confusion matrix (rows=true, cols=pred):")
-    print(f"{indent}{'':<{row_label_w}}" + "".join(f"{n:>{col_w}}" for n in names))
-    for i, name in enumerate(names):
-        print(f"{indent}{name:<{row_label_w}}" + "".join(f"{cm[i, j]:>{col_w}d}" for j in range(len(names))))
-
-
-def save_confusion_matrix(cm: np.ndarray, output_path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(5, 4.5))
-    im = ax.imshow(cm, cmap="Blues")
-    ax.set_xticks(range(len(CLASS_ORDER)))
-    ax.set_yticks(range(len(CLASS_ORDER)))
-    ax.set_xticklabels([CLASS_NAMES[c] for c in CLASS_ORDER], rotation=30, ha="right")
-    ax.set_yticklabels([CLASS_NAMES[c] for c in CLASS_ORDER])
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, str(cm[i, j]), ha="center", va="center", color="black", fontsize=9)
-    fig.colorbar(im, ax=ax)
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +242,7 @@ def main() -> None:
     print("\n[3/4] Loading CLS features")
     feature_cache: Dict[str, np.ndarray] = {}
     tensors: Dict[str, Tuple[torch.Tensor, torch.Tensor]] = {}
-    for name in ("train", "val", "test"):
+    for name in ("train", "val"):
         t0 = time.time()
         tensors[name] = load_pool_tensors(pools[name], args.feature_cache_dir, args.backbone_id, args.fps, feature_cache)
         print(f"       {name}: features={tuple(tensors[name][0].shape)} in {time.time() - t0:.1f}s")
@@ -294,7 +255,6 @@ def main() -> None:
     loaders = {
         "train": DataLoader(TensorDataset(*tensors["train"]), batch_size=args.batch_size, shuffle=True, generator=train_gen, num_workers=args.num_workers, pin_memory=device.type == "cuda"),
         "val": DataLoader(TensorDataset(*tensors["val"]), batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=device.type == "cuda"),
-        "test": DataLoader(TensorDataset(*tensors["test"]), batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=device.type == "cuda"),
     }
 
     # --- 4. Train --------------------------------------------------------
@@ -351,31 +311,6 @@ def main() -> None:
                 print(f"       early stop at epoch {epoch} (no val_loss improvement for {args.patience})")
                 break
 
-    # --- Final test ------------------------------------------------------
-    print("\n[test] Loading best checkpoint and evaluating")
-    model.load_state_dict(best_state)
-    test_loss, test_acc, test_preds, test_targets = run_epoch(model, loaders["test"], criterion, None, device)
-    per_cls_acc = per_class_accuracy(test_targets, test_preds)
-    cm = confusion_matrix(test_targets, test_preds, labels=CLASS_ORDER)
-    f1_macro = float(f1_score(test_targets, test_preds, labels=CLASS_ORDER, average="macro"))
-    f1_per_class = f1_score(test_targets, test_preds, labels=CLASS_ORDER, average=None)
-
-    print(f"       test loss/acc: {test_loss:.4f} / {test_acc:.4f}")
-    print(f"       per-class accuracy:")
-    for cls in CLASS_ORDER:
-        print(f"         {CLASS_NAMES[cls]:14s} {per_cls_acc[cls]:.4f}   f1={f1_per_class[CLASS_ORDER.index(cls)]:.4f}")
-    print(f"       macro F1: {f1_macro:.4f}")
-    print_confusion_matrix(cm)
-    print("       classification report (precision / recall / f1 / support):")
-    test_report = classification_report(
-        test_targets, test_preds,
-        labels=CLASS_ORDER,
-        target_names=[CLASS_NAMES[c] for c in CLASS_ORDER],
-        digits=4, zero_division=0,
-    )
-    for line in test_report.splitlines():
-        print(f"       {line}")
-
     # --- Persist outputs --------------------------------------------------
     (output_dir / "config.json").write_text(json.dumps({
         "seed_split": args.seed_split,
@@ -414,18 +349,8 @@ def main() -> None:
         "best_val_loss": best_val_loss,
         "best_val_loss_epoch": best_val_loss_epoch,
         "f1_at_best_val_loss": f1_at_best_val_loss,
-        "test": {
-            "loss": test_loss,
-            "accuracy": test_acc,
-            "macro_f1": f1_macro,
-            "per_class_accuracy": {CLASS_NAMES[c]: per_cls_acc[c] for c in CLASS_ORDER},
-            "per_class_f1": {CLASS_NAMES[c]: float(f1_per_class[CLASS_ORDER.index(c)]) for c in CLASS_ORDER},
-            "confusion_matrix": cm.tolist(),
-            "confusion_matrix_labels": [CLASS_NAMES[c] for c in CLASS_ORDER],
-        },
     }, indent=2))
 
-    save_confusion_matrix(cm, output_dir / "confusion_matrix.png")
     torch.save(best_state, output_dir / "model.pt")
 
     print(f"\n[done] outputs written to {output_dir}")

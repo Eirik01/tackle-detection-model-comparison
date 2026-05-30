@@ -6,7 +6,6 @@ import numpy as np
 import csv
 import os
 import random
-from tqdm import tqdm
 
 
 class BaseFeatureExtractor(ABC):

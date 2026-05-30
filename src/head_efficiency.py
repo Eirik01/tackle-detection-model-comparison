@@ -25,10 +25,9 @@ from __future__ import annotations
 
 import csv
 import datetime
-import os
 import time
 from pathlib import Path
-from typing import Callable, Iterable, List
+from typing import Iterable, List
 
 import torch
 import torch.nn as nn
